@@ -160,6 +160,13 @@ const Renderer = (() => {
     const c = colors[type] || '#888';
     ctx.fillStyle = c;
     ctx.fillRect(x, y, TS, TS);
+    // Bevel — top/left highlight, bottom/right shadow
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    ctx.fillRect(x, y, TS, 2);
+    ctx.fillRect(x, y, 2, TS);
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.fillRect(x, y + TS - 2, TS, 2);
+    ctx.fillRect(x + TS - 2, y, 2, TS);
 
     if (type === 1) {
       // Grass top
@@ -221,6 +228,16 @@ const Renderer = (() => {
       const sx = c.x - camX;
       const sy = c.y - camY + Math.sin(tick * 0.05 + c.x) * 3;
       if (sx < -40 || sx > ctx.canvas.width + 40) return;
+      // Glow pulse
+      const glowR   = 20 + Math.sin(tick * 0.05 + c.x) * 4;
+      const glowCol = c.type === 'pretzel' ? '200,150,50' : '255,200,50';
+      const grd     = ctx.createRadialGradient(sx, sy, 0, sx, sy, glowR);
+      grd.addColorStop(0, `rgba(${glowCol},0.5)`);
+      grd.addColorStop(1, `rgba(${glowCol},0)`);
+      ctx.fillStyle = grd;
+      ctx.beginPath();
+      ctx.arc(sx, sy, glowR, 0, Math.PI * 2);
+      ctx.fill();
       if (c.type === 'pretzel') drawPretzel(ctx, sx, sy);
       else drawMug(ctx, sx, sy, tick);
     });
@@ -342,7 +359,7 @@ const Renderer = (() => {
 
     ctx.save();
     ctx.translate(sx + player.w / 2, sy + player.h);
-    ctx.scale(player.facing, 1);
+    ctx.scale(player.facing * (player.scaleX || 1), player.scaleY || 1);
 
     const airOffset = player.onGround ? 0 : -4;
     const walkBob   = player.onGround && Math.abs(player.vx) > 0.5 ? Math.sin(tick * 0.2) * 2 : 0;
@@ -594,6 +611,48 @@ const Renderer = (() => {
     ctx.fillText('ESC = Menü', 10, 20);
   }
 
+  // ── Player trail ──────────────────────────────────────────────────────
+  function drawPlayerTrail(ctx, trail, camX, camY) {
+    for (const t of trail) {
+      ctx.globalAlpha = t.a * 0.55;
+      ctx.fillStyle   = '#E8D8A0';
+      ctx.beginPath();
+      ctx.ellipse(t.x - camX, t.y - camY, 7, 9, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ── Score popups ──────────────────────────────────────────────────────
+  function drawScorePopups(ctx, popups, camX, camY) {
+    ctx.font      = 'bold 15px Georgia, serif';
+    ctx.textAlign = 'center';
+    for (const p of popups) {
+      ctx.globalAlpha = p.life / p.maxLife;
+      ctx.fillStyle   = p.text.startsWith('+♥') ? '#FF8888' : '#FFD700';
+      ctx.fillText(p.text, p.x - camX, p.y - camY);
+    }
+    ctx.globalAlpha = 1;
+    ctx.textAlign   = 'left';
+  }
+
+  // ── Level banner ──────────────────────────────────────────────────────
+  function drawLevelBanner(ctx, name, alpha, w, h) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle   = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(0, h * 0.38, w, 64);
+    ctx.fillStyle   = '#FFD700';
+    ctx.font        = 'bold 28px Georgia, serif';
+    ctx.textAlign   = 'center';
+    ctx.shadowColor = '#8B0000';
+    ctx.shadowBlur  = 8;
+    ctx.fillText(name, w / 2, h * 0.38 + 42);
+    ctx.shadowBlur  = 0;
+    ctx.textAlign   = 'left';
+    ctx.restore();
+  }
+
   return {
     drawBackground,
     drawTilemap,
@@ -605,5 +664,8 @@ const Renderer = (() => {
     drawLevelComplete,
     drawGameOver,
     drawPauseHint,
+    drawPlayerTrail,
+    drawScorePopups,
+    drawLevelBanner,
   };
 })();

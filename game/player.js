@@ -20,6 +20,8 @@ const Player = (() => {
       animTimer: 0,
       invincible: 0,    // frames of invincibility after hit
       dead: false,
+      scaleX: 1,        // squash & stretch
+      scaleY: 1,
     };
   }
 
