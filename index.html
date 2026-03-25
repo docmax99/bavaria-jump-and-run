@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Bavaria Jump & Run</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- HUD -->
+    <div id="hud">
+      <span id="hud-lives">❤️ 3</span>
+      <span id="hud-score">🥨 0</span>
+      <span id="hud-level">Level 1</span>
+      <button id="mute-btn" title="Ton an/aus">🔊</button>
+    </div>
+
+    <!-- Touch Controls -->
+    <div id="touch-controls">
+      <button class="touch-btn" id="btn-left">◀</button>
+      <button class="touch-btn" id="btn-jump">▲</button>
+      <button class="touch-btn" id="btn-right">▶</button>
+    </div>
+  </div>
+
+  <script src="game/input.js"></script>
+  <script src="game/audio.js"></script>
+  <script src="game/level.js"></script>
+  <script src="game/player.js"></script>
+  <script src="game/renderer.js"></script>
+  <script src="game/main.js"></script>
+</body>
+</html>
