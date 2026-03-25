@@ -1,83 +1,153 @@
-* {
+/* ── Reset ─────────────────────────────────────────────────────────── */
+*, *::before, *::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+/* ── Page — Bavarian Bierkeller ──────────────────────────────────────── */
 body {
-  background: #1a1a2e;
+  background-color: #140A02;
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 18px,
+      rgba(120,60,10,0.07) 18px,
+      rgba(120,60,10,0.07) 19px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 18px,
+      rgba(120,60,10,0.07) 18px,
+      rgba(120,60,10,0.07) 19px
+    );
   display: flex;
   justify-content: center;
   align-items: center;
   height: 100vh;
   overflow: hidden;
-  font-family: 'Georgia', serif;
+  font-family: 'Crimson Text', Georgia, serif;
 }
 
+/* ── Game container ────────────────────────────────────────────────── */
 #game-container {
   position: relative;
   display: inline-block;
 }
 
+/* Corner ornaments — top-left */
+#game-container::before {
+  content: '';
+  position: absolute;
+  top: -16px; left: -16px;
+  width: 44px; height: 44px;
+  border-top: 2px solid #C8922A;
+  border-left: 2px solid #C8922A;
+  pointer-events: none;
+  z-index: 20;
+}
+
+/* Corner ornaments — bottom-right */
+#game-container::after {
+  content: '';
+  position: absolute;
+  bottom: -16px; right: -16px;
+  width: 44px; height: 44px;
+  border-bottom: 2px solid #C8922A;
+  border-right: 2px solid #C8922A;
+  pointer-events: none;
+  z-index: 20;
+}
+
+/* ── Canvas — ornate carved-wood frame ─────────────────────────────── */
 #gameCanvas {
   display: block;
   image-rendering: pixelated;
-  border: 3px solid #5D4E37;
-  border-radius: 4px;
-  box-shadow: 0 0 40px rgba(0,0,0,0.8);
+  border-radius: 2px;
+  box-shadow:
+    0 0 0 3px #6B3C10,
+    0 0 0 5px #C8922A,
+    0 0 0 8px #3A1E06,
+    0 0 0 11px #C8922A,
+    0 0 0 15px #1A0A02,
+    0 28px 80px rgba(0, 0, 0, 0.95),
+    0 0 80px rgba(200, 140, 30, 0.06) inset;
 }
 
-/* HUD */
+/* ── HUD ────────────────────────────────────────────────────────────── */
 #hud {
   position: absolute;
-  top: 8px;
+  top: 14px;
   left: 0;
   right: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 12px;
+  padding: 0 18px;
   pointer-events: none;
   z-index: 10;
 }
 
 #hud span {
-  background: rgba(0,0,0,0.55);
-  color: #fff;
-  font-size: 16px;
-  font-weight: bold;
-  padding: 4px 10px;
-  border-radius: 20px;
-  text-shadow: 1px 1px 2px #000;
-  letter-spacing: 1px;
+  background: linear-gradient(
+    160deg,
+    rgba(190, 120, 18, 0.92) 0%,
+    rgba(80, 42, 6, 0.94) 100%
+  );
+  border: 1px solid rgba(220, 175, 65, 0.55);
+  color: #FFE07A;
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 14px;
+  border-radius: 3px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.95);
+  letter-spacing: 1.5px;
+  box-shadow:
+    0 3px 12px rgba(0, 0, 0, 0.75),
+    inset 0 1px 0 rgba(255, 225, 100, 0.18),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3);
 }
 
 #mute-btn {
   pointer-events: all;
-  background: rgba(0,0,0,0.55);
-  color: #fff;
-  border: none;
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  font-size: 16px;
+  background: linear-gradient(
+    160deg,
+    rgba(190, 120, 18, 0.92),
+    rgba(80, 42, 6, 0.94)
+  );
+  border: 1px solid rgba(220, 175, 65, 0.55);
+  color: #FFE07A;
+  border-radius: 3px;
+  width: 34px;
+  height: 34px;
+  font-size: 15px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.15s ease;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.75);
 }
 
 #mute-btn:hover {
-  background: rgba(255,255,255,0.2);
+  background: linear-gradient(
+    160deg,
+    rgba(230, 160, 35, 0.96),
+    rgba(120, 68, 12, 0.96)
+  );
+  box-shadow: 0 3px 18px rgba(200, 140, 20, 0.45);
+  transform: translateY(-1px);
 }
 
-/* Touch Controls */
+/* ── Touch controls ─────────────────────────────────────────────────── */
 #touch-controls {
   position: absolute;
-  bottom: 12px;
+  bottom: 16px;
   left: 0;
   right: 0;
   display: none;
   justify-content: space-between;
-  padding: 0 20px;
+  padding: 0 24px;
   z-index: 10;
 }
 
@@ -88,22 +158,36 @@ body {
 }
 
 .touch-btn {
-  background: rgba(255,255,255,0.25);
-  color: #fff;
-  border: 2px solid rgba(255,255,255,0.4);
-  border-radius: 50%;
-  width: 60px;
-  height: 60px;
-  font-size: 22px;
+  background: linear-gradient(
+    160deg,
+    rgba(190, 120, 18, 0.8),
+    rgba(50, 25, 4, 0.85)
+  );
+  color: #FFE07A;
+  border: 1px solid rgba(220, 175, 65, 0.5);
+  border-radius: 4px;
+  width: 66px;
+  height: 66px;
+  font-size: 26px;
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
-  transition: background 0.1s;
+  transition: all 0.08s ease;
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.65),
+    inset 0 1px 0 rgba(255, 225, 100, 0.15);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
 }
 
 .touch-btn:active {
-  background: rgba(255,255,255,0.45);
+  background: linear-gradient(
+    160deg,
+    rgba(230, 160, 35, 0.92),
+    rgba(90, 50, 8, 0.92)
+  );
+  box-shadow: 0 2px 8px rgba(200, 140, 20, 0.5);
+  transform: translateY(2px);
 }
 
 #btn-jump {

@@ -148,6 +148,32 @@ const Renderer = (() => {
       }
     }
 
+    // World boundary wall at right edge
+    const wallX = level.width - camX;
+    if (wallX < ctx.canvas.width + 80) {
+      const wallH = level.height;
+      const wallW = 24;
+      // Stone wall gradient
+      const wGrd = ctx.createLinearGradient(wallX, 0, wallX + wallW, 0);
+      wGrd.addColorStop(0, '#6B4C2A');
+      wGrd.addColorStop(0.4, '#8B6914');
+      wGrd.addColorStop(1, '#3A2010');
+      ctx.fillStyle = wGrd;
+      ctx.fillRect(wallX, -camY, wallW, wallH);
+      // Brick lines
+      ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+      ctx.lineWidth = 1;
+      for (let by2 = 0; by2 < wallH; by2 += TS) {
+        ctx.beginPath();
+        ctx.moveTo(wallX, by2 - camY);
+        ctx.lineTo(wallX + wallW, by2 - camY);
+        ctx.stroke();
+      }
+      // Gold edge highlight
+      ctx.fillStyle = 'rgba(200,146,42,0.6)';
+      ctx.fillRect(wallX, -camY, 3, wallH);
+    }
+
     // Moving platforms
     level.movingPlatforms.forEach(mp => {
       const sx = mp.x - camX;
@@ -312,6 +338,7 @@ const Renderer = (() => {
     ctx.save();
     ctx.translate(x, y);
     ctx.scale(facing, 1);
+    ctx.translate(0, -8);
 
     const walk = Math.sin(tick * 0.18) * 10;
 
@@ -373,7 +400,7 @@ const Renderer = (() => {
       ctx.fill();
     }
 
-    ctx.translate(0, walkBob + airOffset - player.h);
+    ctx.translate(0, walkBob + airOffset);
 
     // Shoes
     ctx.fillStyle = '#3B2800';
@@ -464,7 +491,7 @@ const Renderer = (() => {
   // ── Goal flag ─────────────────────────────────────────────────────────
   function drawGoal(ctx, level, camX, camY, tick) {
     const gx = level.goalX - camX;
-    const gy = level.height - 6 * TS - camY;
+    const gy = level.height - 2 * TS - camY;  // ground surface
     if (gx < -100 || gx > ctx.canvas.width + 100) return;
 
     // Pole
@@ -491,117 +518,278 @@ const Renderer = (() => {
     ctx.fill();
   }
 
+  // ── Shared helper — ornate rectangular border ─────────────────────────
+  function drawOrnateRect(ctx, x, y, bw, bh, color, lw) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth   = lw;
+    ctx.strokeRect(x, y, bw, bh);
+    const s = 14;
+    [[x, y, 1, 1], [x+bw, y, -1, 1], [x, y+bh, 1, -1], [x+bw, y+bh, -1, -1]].forEach(([cx, cy, dx, dy]) => {
+      ctx.lineWidth = lw + 1;
+      ctx.beginPath();
+      ctx.moveTo(cx + dx * s, cy);
+      ctx.lineTo(cx, cy);
+      ctx.lineTo(cx, cy + dy * s);
+      ctx.stroke();
+    });
+  }
+
   // ── Overlay screens ───────────────────────────────────────────────────
   function drawMenu(ctx, w, h) {
-    // Semi-dark overlay
-    ctx.fillStyle = 'rgba(10, 20, 40, 0.88)';
+    // Dark vignette overlay
+    const vgrd = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w * 0.8);
+    vgrd.addColorStop(0,   'rgba(10,4,0,0.55)');
+    vgrd.addColorStop(1,   'rgba(0,0,0,0.92)');
+    ctx.fillStyle = vgrd;
     ctx.fillRect(0, 0, w, h);
 
-    // Title
-    ctx.fillStyle = '#FFD700';
-    ctx.font = 'bold 52px Georgia, serif';
+    // Horizontal gold rule top
+    const ruleGrd = ctx.createLinearGradient(0, 0, w, 0);
+    ruleGrd.addColorStop(0,   'rgba(200,146,42,0)');
+    ruleGrd.addColorStop(0.3, 'rgba(200,146,42,0.9)');
+    ruleGrd.addColorStop(0.7, 'rgba(200,146,42,0.9)');
+    ruleGrd.addColorStop(1,   'rgba(200,146,42,0)');
+    ctx.fillStyle = ruleGrd;
+    ctx.fillRect(0, h * 0.16, w, 1.5);
+
+    // Subtitle label
+    ctx.font = '11px "Cinzel", Georgia, serif';
+    ctx.fillStyle = '#C8922A';
     ctx.textAlign = 'center';
-    ctx.shadowColor = '#8B0000';
-    ctx.shadowBlur = 12;
-    ctx.fillText('Bavaria', w / 2, h * 0.3);
-    ctx.font = 'bold 32px Georgia, serif';
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillText('Jump & Run', w / 2, h * 0.3 + 44);
-    ctx.shadowBlur = 0;
+    ctx.fillText('✦  BAVARIAN ADVENTURE  ✦', w / 2, h * 0.22);
 
-    // Mountain silhouette decoration
-    ctx.fillStyle = '#556B2F';
-    ctx.beginPath();
-    ctx.moveTo(0, h * 0.55);
-    for (let x = 0; x <= w; x += 60) {
-      ctx.lineTo(x, h * 0.55 - 30 - Math.abs(Math.sin(x * 0.035)) * 50);
-    }
-    ctx.lineTo(w, h * 0.55); ctx.closePath(); ctx.fill();
-
-    // Controls info
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(w/2 - 180, h * 0.56, 360, 130);
-    ctx.fillStyle = '#DDD';
-    ctx.font = '16px Georgia, serif';
-    ctx.fillText('🎮 Steuerung', w / 2, h * 0.56 + 26);
-    ctx.font = '14px Georgia, serif';
-    ctx.fillStyle = '#BBB';
-    ctx.fillText('← → / A D: Bewegen', w / 2, h * 0.56 + 52);
-    ctx.fillText('Space / ↑ / W: Springen', w / 2, h * 0.56 + 72);
-    ctx.fillText('🥨 = 10 Punkte   🍺 = Extra-Leben', w / 2, h * 0.56 + 96);
-    ctx.fillText('Auf Gegner springen = besiegen!', w / 2, h * 0.56 + 116);
-
-    // Start button
-    const pulse = 0.95 + Math.sin(Date.now() * 0.004) * 0.05;
+    // Main title
     ctx.save();
-    ctx.translate(w / 2, h * 0.82);
-    ctx.scale(pulse, pulse);
-    ctx.fillStyle = '#FFD700';
-    ctx.beginPath(); ctx.roundRect(-100, -22, 200, 44, 22); ctx.fill();
-    ctx.fillStyle = '#5C3A00';
-    ctx.font = 'bold 20px Georgia, serif';
-    ctx.fillText('▶  Spiel Starten', 0, 7);
+    ctx.font = '700 58px "Cinzel Decorative", Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.shadowColor = '#6B3C10';
+    ctx.shadowBlur = 24;
+    ctx.shadowOffsetY = 4;
+    ctx.strokeStyle = '#6B3C10';
+    ctx.lineWidth = 3;
+    ctx.strokeText('BAVARIA', w / 2, h * 0.34);
+    const tgrd = ctx.createLinearGradient(0, h * 0.27, 0, h * 0.36);
+    tgrd.addColorStop(0, '#FFE07A');
+    tgrd.addColorStop(0.5, '#C8922A');
+    tgrd.addColorStop(1, '#FFE07A');
+    ctx.fillStyle = tgrd;
+    ctx.fillText('BAVARIA', w / 2, h * 0.34);
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.font = '400 22px "Cinzel", Georgia, serif';
+    ctx.fillStyle = '#DDB86A';
+    ctx.fillText('JUMP  &  RUN', w / 2, h * 0.41);
     ctx.restore();
 
-    ctx.fillStyle = '#888';
-    ctx.font = '13px Georgia, serif';
-    ctx.fillText('Drücke Enter oder Klicke zum Starten', w / 2, h * 0.93);
+    // Gold rule below title
+    ctx.fillStyle = ruleGrd;
+    ctx.fillRect(0, h * 0.45, w, 1.5);
+
+    ctx.fillStyle = '#C8922A';
+    ctx.textAlign = 'center';
+    ctx.font = '10px Georgia';
+    ctx.fillText('◆  ◆  ◆', w / 2, h * 0.49);
+
+    // Controls panel
+    const bx = w/2 - 200, by = h * 0.51, bw2 = 400, bh2 = 144;
+    const boxGrd = ctx.createLinearGradient(bx, by, bx, by + bh2);
+    boxGrd.addColorStop(0, 'rgba(100,55,8,0.72)');
+    boxGrd.addColorStop(1, 'rgba(20,8,1,0.78)');
+    ctx.fillStyle = boxGrd;
+    ctx.beginPath(); ctx.roundRect(bx, by, bw2, bh2, 6); ctx.fill();
+    ctx.strokeStyle = 'rgba(200,146,42,0.45)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.roundRect(bx, by, bw2, bh2, 6); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,225,100,0.12)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.roundRect(bx+1, by+1, bw2-2, bh2-2, 5); ctx.stroke();
+
+    ctx.textAlign = 'center';
+    ctx.font = '700 13px "Cinzel", Georgia, serif';
+    ctx.fillStyle = '#FFE07A';
+    ctx.fillText('STEUERUNG', w/2, by + 24);
+    ctx.font = '14px "Crimson Text", Georgia, serif';
+    ctx.fillStyle = 'rgba(255,224,122,0.8)';
+    const lines = [
+      '← → / A D  —  Bewegen',
+      'Leertaste / ↑ / W  —  Springen',
+      '🥨 Brezel = 10 Pkt   🍺 Maßkrug = Extra-Leben',
+      'Auf Gegner springen  =  besiegen!',
+    ];
+    lines.forEach((l, i) => ctx.fillText(l, w/2, by + 50 + i * 26));
+
+    // Pulsing start button
+    const pulse = 0.97 + Math.sin(Date.now() * 0.004) * 0.03;
+    ctx.save();
+    ctx.translate(w / 2, h * 0.84);
+    ctx.scale(pulse, pulse);
+    const btnGrd = ctx.createLinearGradient(-120, -24, -120, 24);
+    btnGrd.addColorStop(0, 'rgba(220,155,30,0.96)');
+    btnGrd.addColorStop(1, 'rgba(100,55,8,0.96)');
+    ctx.fillStyle = btnGrd;
+    ctx.beginPath(); ctx.roundRect(-120, -24, 240, 48, 6); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,225,100,0.7)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.roundRect(-120, -24, 240, 48, 6); ctx.stroke();
+    ctx.shadowColor = 'rgba(200,140,20,0.6)';
+    ctx.shadowBlur = 18;
+    ctx.fillStyle = '#1A0A01';
+    ctx.font = '700 17px "Cinzel", Georgia, serif';
+    ctx.fillText('▶  SPIEL STARTEN', 0, 6);
+    ctx.shadowBlur = 0;
+    ctx.restore();
+
+    ctx.fillStyle = 'rgba(200,146,42,0.5)';
+    ctx.font = '12px "Crimson Text", Georgia, serif';
+    ctx.fillText('Enter oder Klick zum Starten', w / 2, h * 0.94);
     ctx.textAlign = 'left';
   }
 
   function drawLevelComplete(ctx, w, h, levelName, score, nextLevel) {
-    ctx.fillStyle = 'rgba(0, 60, 0, 0.82)';
+    const vgrd = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w * 0.75);
+    vgrd.addColorStop(0, 'rgba(40,20,0,0.6)');
+    vgrd.addColorStop(1, 'rgba(0,0,0,0.9)');
+    ctx.fillStyle = vgrd;
     ctx.fillRect(0, 0, w, h);
 
-    ctx.fillStyle = '#FFD700';
-    ctx.font = 'bold 40px Georgia, serif';
+    // Confetti dots
+    const confettiColors = ['#FFE07A','#C8922A','#FF8844','#88CC44','#44AAFF'];
+    const t = Date.now() * 0.0008;
+    for (let i = 0; i < 28; i++) {
+      const cx = ((Math.sin(i * 2.4 + t) * 0.5 + 0.5) * w * 1.1) - w * 0.05;
+      const cy = ((Math.cos(i * 1.7 + t * 0.7) * 0.5 + 0.5) * h * 0.9);
+      const r  = 3 + Math.sin(i * 3.1 + t) * 2;
+      ctx.fillStyle = confettiColors[i % confettiColors.length];
+      ctx.globalAlpha = 0.35 + Math.sin(i + t) * 0.15;
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    const rGrd = ctx.createLinearGradient(0, 0, w, 0);
+    rGrd.addColorStop(0,    'rgba(200,146,42,0)');
+    rGrd.addColorStop(0.35, 'rgba(200,146,42,0.8)');
+    rGrd.addColorStop(0.65, 'rgba(200,146,42,0.8)');
+    rGrd.addColorStop(1,    'rgba(200,146,42,0)');
+    ctx.fillStyle = rGrd; ctx.fillRect(0, h*0.18, w, 1.5);
+
+    ctx.save();
     ctx.textAlign = 'center';
-    ctx.fillText('Level Geschafft!', w / 2, h * 0.35);
+    ctx.font = '700 54px "Cinzel Decorative", Georgia, serif';
+    ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 20; ctx.shadowOffsetY = 3;
+    ctx.strokeStyle = '#6B3C10'; ctx.lineWidth = 3;
+    ctx.strokeText('GESCHAFFT!', w/2, h * 0.32);
+    const tg = ctx.createLinearGradient(0, h*0.26, 0, h*0.34);
+    tg.addColorStop(0, '#FFE07A'); tg.addColorStop(0.5, '#C8922A'); tg.addColorStop(1, '#FFE07A');
+    ctx.fillStyle = tg;
+    ctx.fillText('GESCHAFFT!', w/2, h * 0.32);
+    ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+    ctx.font = '400 16px "Cinzel", Georgia, serif';
+    ctx.fillStyle = '#DDB86A';
+    ctx.fillText(levelName.toUpperCase(), w/2, h * 0.41);
+    ctx.restore();
 
-    ctx.fillStyle = '#FFF';
-    ctx.font = '22px Georgia, serif';
-    ctx.fillText(levelName, w / 2, h * 0.45);
+    ctx.fillStyle = rGrd; ctx.fillRect(0, h*0.45, w, 1.5);
 
-    ctx.font = '18px Georgia, serif';
-    ctx.fillStyle = '#DDD';
-    ctx.fillText(`Punkte: ${score}`, w / 2, h * 0.55);
+    // Score panel
+    const bx = w/2 - 160, by = h*0.48, bw2 = 320, bh2 = 80;
+    const bGrd = ctx.createLinearGradient(bx, by, bx, by+bh2);
+    bGrd.addColorStop(0, 'rgba(100,55,8,0.75)'); bGrd.addColorStop(1, 'rgba(20,8,1,0.8)');
+    ctx.fillStyle = bGrd;
+    ctx.beginPath(); ctx.roundRect(bx, by, bw2, bh2, 6); ctx.fill();
+    ctx.strokeStyle = 'rgba(200,146,42,0.5)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.roundRect(bx, by, bw2, bh2, 6); ctx.stroke();
 
+    ctx.textAlign = 'center';
+    ctx.font = '13px "Cinzel", Georgia, serif';
+    ctx.fillStyle = '#C8922A';
+    ctx.fillText('PUNKTE', w/2, by + 28);
+    ctx.font = '700 30px "Cinzel Decorative", Georgia, serif';
+    ctx.fillStyle = '#FFE07A';
+    ctx.fillText(score.toString(), w/2, by + 64);
+
+    ctx.font = '700 18px "Cinzel", Georgia, serif';
     if (nextLevel) {
-      ctx.fillStyle = '#FFD700';
-      ctx.font = '20px Georgia, serif';
-      ctx.fillText('Weiter → ' + nextLevel, w / 2, h * 0.68);
+      ctx.fillStyle = '#FFE07A';
+      ctx.fillText('Weiter: ' + nextLevel, w/2, h * 0.72);
     } else {
-      ctx.fillStyle = '#FFD700';
-      ctx.font = '22px Georgia, serif';
-      ctx.fillText('🏆 Du hast gewonnen!', w / 2, h * 0.68);
+      ctx.font = '700 22px "Cinzel Decorative", Georgia, serif';
+      const tg2 = ctx.createLinearGradient(0, h*0.68, 0, h*0.76);
+      tg2.addColorStop(0, '#FFE07A'); tg2.addColorStop(1, '#C8922A');
+      ctx.fillStyle = tg2;
+      ctx.fillText('🏆  DU HAST GEWONNEN!', w/2, h * 0.72);
     }
 
-    ctx.fillStyle = '#AAA';
-    ctx.font = '16px Georgia, serif';
-    ctx.fillText('Enter / Klick zum Fortfahren', w / 2, h * 0.8);
+    ctx.fillStyle = 'rgba(200,146,42,0.5)';
+    ctx.font = '13px "Crimson Text", Georgia, serif';
+    ctx.fillText('Enter oder Klick zum Fortfahren', w/2, h * 0.88);
     ctx.textAlign = 'left';
   }
 
   function drawGameOver(ctx, w, h, score) {
-    ctx.fillStyle = 'rgba(80, 0, 0, 0.85)';
+    const vgrd = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w * 0.8);
+    vgrd.addColorStop(0, 'rgba(60,0,0,0.65)');
+    vgrd.addColorStop(1, 'rgba(0,0,0,0.95)');
+    ctx.fillStyle = vgrd;
     ctx.fillRect(0, 0, w, h);
 
-    ctx.fillStyle = '#FF4444';
-    ctx.font = 'bold 48px Georgia, serif';
+    // Crack lines
+    ctx.strokeStyle = 'rgba(180,0,0,0.3)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const len = 100 + Math.sin(i * 1.7) * 40;
+      ctx.beginPath();
+      ctx.moveTo(w/2 + Math.cos(angle) * 30, h/2 + Math.sin(angle) * 20);
+      ctx.lineTo(w/2 + Math.cos(angle) * len, h/2 + Math.sin(angle) * len * 0.7);
+      ctx.stroke();
+    }
+
+    const rGrd = ctx.createLinearGradient(0, 0, w, 0);
+    rGrd.addColorStop(0,    'rgba(180,30,30,0)');
+    rGrd.addColorStop(0.35, 'rgba(180,30,30,0.7)');
+    rGrd.addColorStop(0.65, 'rgba(180,30,30,0.7)');
+    rGrd.addColorStop(1,    'rgba(180,30,30,0)');
+    ctx.fillStyle = rGrd; ctx.fillRect(0, h*0.2, w, 1.5);
+
+    ctx.save();
     ctx.textAlign = 'center';
-    ctx.fillText('Game Over', w / 2, h * 0.38);
+    ctx.font = '700 60px "Cinzel Decorative", Georgia, serif';
+    ctx.shadowColor = 'rgba(200,0,0,0.8)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 4;
+    ctx.strokeStyle = '#5A0000'; ctx.lineWidth = 4;
+    ctx.strokeText('GAME OVER', w/2, h * 0.36);
+    const tg = ctx.createLinearGradient(0, h*0.28, 0, h*0.38);
+    tg.addColorStop(0, '#FF8888'); tg.addColorStop(0.5, '#CC2200'); tg.addColorStop(1, '#FF6666');
+    ctx.fillStyle = tg;
+    ctx.fillText('GAME OVER', w/2, h * 0.36);
+    ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+    ctx.restore();
 
-    ctx.fillStyle = '#FFF';
-    ctx.font = '24px Georgia, serif';
-    ctx.fillText(`Punkte: ${score}`, w / 2, h * 0.52);
+    ctx.fillStyle = rGrd; ctx.fillRect(0, h*0.41, w, 1.5);
 
-    ctx.fillStyle = '#FFD700';
-    ctx.font = '20px Georgia, serif';
-    ctx.fillText('Nochmal versuchen?', w / 2, h * 0.65);
+    // Score panel
+    const bx = w/2 - 150, by = h*0.45, bw2 = 300, bh2 = 76;
+    const bGrd = ctx.createLinearGradient(bx, by, bx, by+bh2);
+    bGrd.addColorStop(0, 'rgba(60,8,8,0.8)'); bGrd.addColorStop(1, 'rgba(10,2,2,0.85)');
+    ctx.fillStyle = bGrd;
+    ctx.beginPath(); ctx.roundRect(bx, by, bw2, bh2, 6); ctx.fill();
+    ctx.strokeStyle = 'rgba(180,30,30,0.5)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.roundRect(bx, by, bw2, bh2, 6); ctx.stroke();
 
-    ctx.fillStyle = '#AAA';
-    ctx.font = '16px Georgia, serif';
-    ctx.fillText('Enter / Klick zum Fortfahren', w / 2, h * 0.78);
+    ctx.textAlign = 'center';
+    ctx.font = '13px "Cinzel", Georgia, serif';
+    ctx.fillStyle = '#CC5555';
+    ctx.fillText('ENDPUNKTE', w/2, by + 26);
+    ctx.font = '700 30px "Cinzel Decorative", Georgia, serif';
+    ctx.fillStyle = '#FF8888';
+    ctx.fillText(score.toString(), w/2, by + 62);
+
+    ctx.font = '700 16px "Cinzel", Georgia, serif';
+    ctx.fillStyle = '#FFE07A';
+    ctx.fillText('Nochmal versuchen?', w/2, h * 0.72);
+
+    ctx.fillStyle = 'rgba(180,80,80,0.6)';
+    ctx.font = '13px "Crimson Text", Georgia, serif';
+    ctx.fillText('Enter oder Klick zum Fortfahren', w/2, h * 0.84);
     ctx.textAlign = 'left';
   }
 

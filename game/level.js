@@ -154,24 +154,24 @@ function makeCollectibles(levelIndex) {
 // ── Enemies ───────────────────────────────────────────────────────────────
 function makeEnemies(levelIndex) {
   if (levelIndex === 0) return [
-    {x:400, y:13*32, vx:-0.8, minX:320, maxX:520, alive:true},
+    {x:400, y:14*32, vx:-0.8, minX:320, maxX:520, alive:true},
     {x:700, y:11*32, vx:-0.8, minX:640, maxX:770, alive:true},
     {x:1000,y:9*32,  vx:-1,   minX:900, maxX:1080, alive:true},
     {x:1300,y:14*32, vx:-1,   minX:1200,maxX:1400, alive:true},
   ];
   if (levelIndex === 1) return [
     {x:350, y:14*32, vx:-1,   minX:288, maxX:480,  alive:true},
-    {x:700, y:14*32, vx:-1.2, minX:640, maxX:800,  alive:true},
-    {x:1100,y:12*32, vx:-1,   minX:1024,maxX:1200, alive:true},
+    {x:768, y:14*32, vx:-1.2, minX:704, maxX:1152, alive:true},
+    {x:1100,y:11*32, vx:-1,   minX:1024,maxX:1200, alive:true},
     {x:1500,y:9*32,  vx:-1.5, minX:1440,maxX:1600, alive:true},
     {x:1900,y:7*32,  vx:-1.5, minX:1840,maxX:2000, alive:true},
   ];
   return [
-    {x:300, y:13*32, vx:-1.2, minX:240, maxX:400,  alive:true},
-    {x:700, y:11*32, vx:-1.5, minX:640, maxX:780,  alive:true},
-    {x:1100,y:9*32,  vx:-1.8, minX:1040,maxX:1200, alive:true},
-    {x:1500,y:7*32,  vx:-2,   minX:1440,maxX:1600, alive:true},
-    {x:1900,y:5*32,  vx:-2,   minX:1840,maxX:2000, alive:true},
+    {x:300, y:14*32, vx:-1.2, minX:240, maxX:400,  alive:true},
+    {x:700, y:10*32, vx:-1.5, minX:640, maxX:768,  alive:true},
+    {x:1152,y:8*32,  vx:-1.8, minX:1120,maxX:1216, alive:true},
+    {x:1376,y:7*32,  vx:-2,   minX:1344,maxX:1440, alive:true},
+    {x:1824,y:5*32,  vx:-2,   minX:1792,maxX:1888, alive:true},
   ];
 }
 

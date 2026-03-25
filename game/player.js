@@ -231,7 +231,7 @@ const Player = (() => {
 
     level.enemies.forEach(e => {
       if (!e.alive) return;
-      const EW = 28, EH = 28;
+      const EW = 26, EH = 36;
       const ex = e.x - EW/2, ey = e.y - EH;
 
       const overlapX = player.x < ex + EW && player.x + player.w > ex;
