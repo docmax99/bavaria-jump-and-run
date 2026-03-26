@@ -49,10 +49,6 @@ const LEVEL1_MAP = (() => {
   for (let c = 25; c < 32; c++) { m[12][c] = 1; m[13][c] = 2; m[14][c] = 2; }
   for (let c = 44; c < 50; c++) { m[11][c] = 1; m[12][c] = 2; m[13][c] = 2; m[14][c] = 2; }
 
-  // Pit at end
-  for (let c = 56; c < COLS; c++) { m[14][c] = 0; m[15][c] = 0; }
-  for (let c = 57; c < COLS; c++) m[15][c] = 2;
-
   return m;
 })();
 
