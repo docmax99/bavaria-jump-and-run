@@ -263,7 +263,7 @@ const Player = (() => {
       if (c.collected) return;
       const dx = (player.x + player.w/2) - c.x;
       const dy = (player.y + player.h/2) - c.y;
-      if (Math.abs(dx) < 20 && Math.abs(dy) < 20) {
+      if (Math.abs(dx) < 36 && Math.abs(dy) < 36) {
         c.collected = true;
         if (c.type === 'pretzel') { points += 10; Audio.sfxCoin(); }
         else { livesGained++; Audio.sfxCoin(); }
