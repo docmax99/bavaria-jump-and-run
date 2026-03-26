@@ -24,6 +24,8 @@ const Player = (() => {
       dead: false,
       scaleX: 1,        // squash & stretch
       scaleY: 1,
+      speedTimer: 0,    // frames speed-boost active (~5s @ 60fps = 300)
+      flyTimer: 0,      // frames fly active (~3s @ 60fps = 180)
     };
   }
 
@@ -31,15 +33,21 @@ const Player = (() => {
     const { map, gravity } = level;
     const TS = TILE_SIZE;
 
+    // ── Power-up timers ───────────────────────────────────────────────────
+    const speedActive = player.speedTimer > 0;
+    const flyActive   = player.flyTimer   > 0;
+    if (player.speedTimer > 0) player.speedTimer--;
+    if (player.flyTimer   > 0) player.flyTimer--;
+
     // ── Horizontal input ──────────────────────────────────────────────────
     const friction = player.onIce ? 0.96 : level.friction;
-    const accel    = player.onIce ? 0.6  : 1.0;
+    const accel    = speedActive ? 1.2 : (player.onIce ? 0.6 : 1.0);
 
     if (input.left())  { player.vx -= MOVE_SPEED * accel; player.facing = -1; }
     if (input.right()) { player.vx += MOVE_SPEED * accel; player.facing =  1; }
 
     // Clamp horizontal speed
-    const maxVx = player.onIce ? 6 : MOVE_SPEED;
+    const maxVx = speedActive ? 14 : (player.onIce ? 6 : MOVE_SPEED);
     player.vx = Math.max(-maxVx, Math.min(maxVx, player.vx));
 
     // Apply friction
@@ -97,11 +105,20 @@ const Player = (() => {
       player.vy *= 0.75;
     }
 
-    // ── Gravity ───────────────────────────────────────────────────────────
-    player.vy += gravity;
-    // Wall slide — slow fall when hugging a wall
-    if (player.onWall !== 0 && !player.onGround && player.vy > 3) player.vy = 3;
-    if (player.vy > 18) player.vy = 18; // terminal velocity
+    // ── Gravity / Fly ─────────────────────────────────────────────────────
+    if (flyActive) {
+      // No gravity — player controls vertical with jump/down
+      player.vy = 0;
+      if (input.jump())                                                    player.vy = -4;
+      if (input.isDown('ArrowDown') || input.isDown('KeyS')) player.vy =  4;
+      player.onGround = false;
+      player.jumpsLeft = 2; // refill jumps so landing works normally
+    } else {
+      player.vy += gravity;
+      // Wall slide — slow fall when hugging a wall
+      if (player.onWall !== 0 && !player.onGround && player.vy > 3) player.vy = 3;
+      if (player.vy > 18) player.vy = 18; // terminal velocity
+    }
 
     // ── Move X then collide ───────────────────────────────────────────────
     player.x += player.vx;
@@ -259,17 +276,21 @@ const Player = (() => {
   function checkCollectibles(player, level) {
     let points = 0;
     let livesGained = 0;
+    let speedBoost = false;
+    let flyBoost = false;
     level.collectibles.forEach(c => {
       if (c.collected) return;
       const dx = (player.x + player.w/2) - c.x;
       const dy = (player.y + player.h/2) - c.y;
       if (Math.abs(dx) < 36 && Math.abs(dy) < 36) {
         c.collected = true;
-        if (c.type === 'pretzel') { points += 10; Audio.sfxCoin(); }
-        else { livesGained++; Audio.sfxCoin(); }
+        if (c.type === 'pretzel')    { points += 10; Audio.sfxCoin(); }
+        else if (c.type === 'mug')   { livesGained++; Audio.sfxCoin(); }
+        else if (c.type === 'speedboost') { speedBoost = true; Audio.sfxCoin(); }
+        else if (c.type === 'fly')        { flyBoost   = true; Audio.sfxCoin(); }
       }
     });
-    return { points, livesGained };
+    return { points, livesGained, speedBoost, flyBoost };
   }
 
   function checkEnemies(player, level) {
@@ -279,7 +300,8 @@ const Player = (() => {
 
     level.enemies.forEach(e => {
       if (!e.alive) return;
-      const EW = 26, EH = 36;
+      const EW = e.W || 26;
+      const EH = e.H || 36;
       const ex = e.x - EW/2, ey = e.y - EH;
 
       const overlapX = player.x < ex + EW && player.x + player.w > ex;
@@ -290,7 +312,12 @@ const Player = (() => {
         const playerBottom = player.y + player.h;
         const enemyTop     = ey;
         if (player.vy > 0 && playerBottom - player.vy <= enemyTop + 4) {
-          e.alive = false;
+          if (e.isBoss) {
+            e.hp--;
+            if (e.hp <= 0) e.alive = false;
+          } else {
+            e.alive = false;
+          }
           player.vy = JUMP_FORCE * 0.7;
           killed++;
           Audio.sfxEnemyDie();

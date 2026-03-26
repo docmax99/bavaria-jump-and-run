@@ -28,6 +28,14 @@ const Renderer = (() => {
       ground:    '#E8E8FF',
       tileColors: { 1:'#DDEEFF', 2:'#888899', 3:'#B8864E', 4:'#E8F4FF', 5:'#C8F0FF' },
     },
+    castle: {
+      skyTop:    '#1A1228',
+      skyBot:    '#3A2860',
+      mountain1: '#2A1E3E',
+      mountain2: '#4A3870',
+      ground:    '#4A3870',
+      tileColors: { 1:'#4A3870', 2:'#5A4888', 3:'#C8A060', 4:'#DDEEFF', 5:'#AADDFF', 6:'#3E2E5A' },
+    },
   };
 
   // ── Skins ─────────────────────────────────────────────────────────────
@@ -97,7 +105,8 @@ const Renderer = (() => {
     drawMountainRange(ctx, camX * 0.35, canvasW, canvasH, t.mountain1, 0.68, 60);
 
     // Trees (parallax 0.6)
-    if (theme !== 'mountain') drawTrees(ctx, camX * 0.6, canvasW, canvasH, theme);
+    if (theme === 'castle')        drawCastleWalls(ctx, camX * 0.4, canvasW, canvasH);
+    else if (theme !== 'mountain') drawTrees(ctx, camX * 0.6, canvasW, canvasH, theme);
 
     // Clouds (parallax 0.1)
     drawClouds(ctx, camX * 0.1, canvasW, canvasH);
@@ -169,6 +178,31 @@ const Renderer = (() => {
       const cy = yFrac * h;
       drawCloud(ctx, cx, cy, cw, ch);
     });
+  }
+
+  function drawCastleWalls(ctx, offsetX, w, h) {
+    const baseY = h * 0.78;
+    const step = 160;
+    const count = Math.ceil(w / step) + 4;
+    const startC = Math.floor(offsetX / step) - 1;
+    ctx.fillStyle = '#2A1E40';
+    for (let i = startC; i < startC + count; i++) {
+      const x = i * step - (offsetX % step);
+      const towerH = 70 + (Math.abs(Math.sin(i * 1.3)) * 30);
+      // Tower body
+      ctx.fillRect(x, baseY - towerH, 40, towerH);
+      // Battlements
+      for (let b = 0; b < 4; b++) {
+        ctx.fillRect(x + b * 11, baseY - towerH - 14, 7, 14);
+      }
+      // Arch window
+      ctx.fillStyle = '#1A0E2E';
+      ctx.beginPath();
+      ctx.arc(x + 20, baseY - towerH * 0.5, 7, Math.PI, 0);
+      ctx.fillRect(x + 13, baseY - towerH * 0.5, 14, 10);
+      ctx.fill();
+      ctx.fillStyle = '#2A1E40';
+    }
   }
 
   function drawCloud(ctx, x, y, w, h) {
@@ -285,6 +319,18 @@ const Renderer = (() => {
       ctx.moveTo(x + 4, y + 4); ctx.lineTo(x + TS - 10, y + 10);
       ctx.moveTo(x + 8, y + TS - 8); ctx.lineTo(x + TS - 4, y + TS - 14);
       ctx.stroke();
+    } else if (type === 6) {
+      // Castle brick — dark stone with mortar lines
+      ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(x + 0.5, y + 0.5, TS - 1, TS - 1);
+      ctx.beginPath();
+      ctx.moveTo(x + TS / 3, y + 0.5); ctx.lineTo(x + TS / 3, y + TS / 2 - 1);
+      ctx.moveTo(x + 0.5, y + TS / 2); ctx.lineTo(x + 2 * TS / 3, y + TS / 2);
+      ctx.stroke();
+      // Subtle surface highlight
+      ctx.fillStyle = 'rgba(255,255,255,0.06)';
+      ctx.fillRect(x, y, TS, 2);
     }
   }
 
@@ -306,16 +352,21 @@ const Renderer = (() => {
       if (sx < -40 || sx > ctx.canvas.width + 40) return;
       // Glow pulse
       const glowR   = 20 + Math.sin(tick * 0.05 + c.x) * 4;
-      const glowCol = c.type === 'pretzel' ? '200,150,50' : '255,200,50';
+      const glowCol = c.type === 'pretzel'    ? '200,150,50'
+                    : c.type === 'mug'         ? '255,200,50'
+                    : c.type === 'speedboost'  ? '255,220,0'
+                    :                            '100,220,255'; // fly
       const grd     = ctx.createRadialGradient(sx, sy, 0, sx, sy, glowR);
-      grd.addColorStop(0, `rgba(${glowCol},0.5)`);
+      grd.addColorStop(0, `rgba(${glowCol},0.6)`);
       grd.addColorStop(1, `rgba(${glowCol},0)`);
       ctx.fillStyle = grd;
       ctx.beginPath();
       ctx.arc(sx, sy, glowR, 0, Math.PI * 2);
       ctx.fill();
-      if (c.type === 'pretzel') drawPretzel(ctx, sx, sy);
-      else drawMug(ctx, sx, sy, tick);
+      if (c.type === 'pretzel')   drawPretzel(ctx, sx, sy);
+      else if (c.type === 'mug')  drawMug(ctx, sx, sy, tick);
+      else if (c.type === 'speedboost') drawSpeedBoostIcon(ctx, sx, sy, tick);
+      else drawFlyIcon(ctx, sx, sy, tick);
     });
   }
 
@@ -373,15 +424,110 @@ const Renderer = (() => {
     ctx.restore();
   }
 
+  function drawSpeedBoostIcon(ctx, x, y, tick) {
+    ctx.save();
+    ctx.translate(x, y);
+    const pulse = 1 + Math.sin(tick * 0.12) * 0.12;
+    ctx.scale(pulse, pulse);
+    // Lightning bolt
+    ctx.fillStyle = '#FFE020';
+    ctx.beginPath();
+    ctx.moveTo(4, -14); ctx.lineTo(-3, -2); ctx.lineTo(3, -2);
+    ctx.lineTo(-4, 14); ctx.lineTo(3, 2);   ctx.lineTo(-3, 2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#FF8800';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawFlyIcon(ctx, x, y, tick) {
+    ctx.save();
+    ctx.translate(x, y);
+    const bob = Math.sin(tick * 0.1) * 2;
+    ctx.translate(0, bob);
+    ctx.fillStyle = '#AAEEFF';
+    // Left wing
+    ctx.beginPath();
+    ctx.moveTo(0, 0); ctx.quadraticCurveTo(-16, -12, -20, 2); ctx.quadraticCurveTo(-11, 7, 0, 0);
+    ctx.fill();
+    // Right wing
+    ctx.beginPath();
+    ctx.moveTo(0, 0); ctx.quadraticCurveTo(16, -12, 20, 2); ctx.quadraticCurveTo(11, 7, 0, 0);
+    ctx.fill();
+    // Body
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
   // ── Enemies ───────────────────────────────────────────────────────────
   function drawEnemies(ctx, level, camX, camY, tick) {
     level.enemies.forEach(e => {
       if (!e.alive) return;
       const sx = e.x - camX;
       const sy = e.y - camY;
-      if (sx < -60 || sx > ctx.canvas.width + 60) return;
-      drawWiesnFigure(ctx, sx, sy, e.vx < 0 ? -1 : 1, tick);
+      if (sx < -80 || sx > ctx.canvas.width + 80) return;
+      if (e.isBoss) drawBoss(ctx, sx, sy, e, tick);
+      else          drawWiesnFigure(ctx, sx, sy, e.vx < 0 ? -1 : 1, tick);
     });
+  }
+
+  function drawBoss(ctx, x, y, boss, tick) {
+    ctx.save();
+    ctx.translate(x, y);
+    const facing = boss.vx < 0 ? -1 : 1;
+    ctx.scale(facing, 1);
+
+    // Legs — armoured, wide
+    ctx.fillStyle = '#1A1A2E';
+    ctx.fillRect(-20, -20, 15, 22);
+    ctx.fillRect(5,   -20, 15, 22);
+
+    // Body — dark plate armour
+    ctx.fillStyle = '#1A1A2E';
+    ctx.fillRect(-24, -52, 48, 34);
+    // Armour highlight strips
+    ctx.fillStyle = '#3A3A5E';
+    ctx.fillRect(-22, -50, 8, 30);
+    ctx.fillRect(14,  -50, 8, 30);
+    // Red shoulder pads
+    ctx.fillStyle = '#880000';
+    ctx.fillRect(-28, -52, 10, 8);
+    ctx.fillRect(18,  -52, 10, 8);
+    // Belly gem (flashes in phase 2)
+    ctx.fillStyle = boss.hp <= 1 ? '#FF4400' : '#CC0000';
+    ctx.beginPath(); ctx.arc(0, -38, 7, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 1.5; ctx.stroke();
+
+    // Head
+    ctx.fillStyle = '#F0B090';
+    ctx.beginPath(); ctx.arc(0, -58, 11, 0, Math.PI * 2); ctx.fill();
+    // Angry eyes (glow red in phase 2)
+    ctx.fillStyle = boss.hp <= 1 ? '#FF0000' : '#220000';
+    ctx.fillRect(-5, -62, 3, 3);
+    ctx.fillRect(2,  -62, 3, 3);
+    // Grin
+    ctx.strokeStyle = '#220000';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(-4, -54); ctx.lineTo(4, -54); ctx.stroke();
+
+    // Horned helmet
+    ctx.fillStyle = '#111128';
+    ctx.fillRect(-13, -72, 26, 16);
+    // Horns
+    ctx.beginPath();
+    ctx.moveTo(-11, -72); ctx.lineTo(-18, -88); ctx.lineTo(-6, -74);
+    ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(11,  -72); ctx.lineTo(18,  -88); ctx.lineTo(6,  -74);
+    ctx.closePath(); ctx.fill();
+    // Visor slit
+    ctx.fillStyle = '#CC0000';
+    ctx.fillRect(-9, -68, 18, 3);
+
+    ctx.restore();
   }
 
   function drawWiesnFigure(ctx, x, y, facing, tick) {
@@ -995,6 +1141,104 @@ const Renderer = (() => {
     ctx.restore();
   }
 
+  // ── Boss HP bar ───────────────────────────────────────────────────────
+  function drawBossHpBar(ctx, boss, w, h) {
+    if (!boss || !boss.alive) return;
+    const barW = 240, barH = 18;
+    const bx = w / 2 - barW / 2;
+    const by = 18;
+    // Background
+    ctx.fillStyle = 'rgba(0,0,0,0.75)';
+    ctx.beginPath(); ctx.roundRect(bx - 5, by - 18, barW + 10, barH + 23, 5); ctx.fill();
+    // Label
+    ctx.fillStyle = '#FFD700';
+    ctx.font = 'bold 11px Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('ENDGEGNER', w / 2, by - 4);
+    // Damage track
+    ctx.fillStyle = '#440000';
+    ctx.fillRect(bx, by, barW, barH);
+    // HP fill
+    const hpFrac = boss.hp / boss.maxHp;
+    ctx.fillStyle = hpFrac > 0.5 ? '#CC2200' : '#FF4400';
+    ctx.fillRect(bx, by, barW * hpFrac, barH);
+    // Border
+    ctx.strokeStyle = '#FFD700';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.roundRect(bx, by, barW, barH, 3); ctx.stroke();
+    ctx.textAlign = 'left';
+  }
+
+  // ── Power-up HUD ──────────────────────────────────────────────────────
+  function drawPowerUpHUD(ctx, player, w) {
+    const icons = [];
+    if (player.speedTimer > 0) icons.push({ type: 'speed', t: player.speedTimer, max: 300 });
+    if (player.flyTimer   > 0) icons.push({ type: 'fly',   t: player.flyTimer,   max: 180 });
+    if (icons.length === 0) return;
+    icons.forEach((icon, i) => {
+      const ix = w - 62 - i * 58;
+      const iy = 10;
+      ctx.fillStyle = 'rgba(0,0,0,0.65)';
+      ctx.beginPath(); ctx.roundRect(ix, iy, 48, 50, 6); ctx.fill();
+      if (icon.type === 'speed') drawSpeedBoostIcon(ctx, ix + 24, iy + 22, 0);
+      else                        drawFlyIcon(ctx,        ix + 24, iy + 24, 0);
+      const frac = icon.t / icon.max;
+      ctx.fillStyle = icon.type === 'speed' ? '#FFE020' : '#AAEEFF';
+      ctx.fillRect(ix + 3, iy + 44, 42 * frac, 4);
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(ix + 3, iy + 44, 42, 4);
+    });
+  }
+
+  // ── Game complete screen ──────────────────────────────────────────────
+  function drawGameComplete(ctx, w, h, score, highscore, isNewHighscore) {
+    // Golden overlay
+    const bg = ctx.createLinearGradient(0, 0, 0, h);
+    bg.addColorStop(0, 'rgba(30,10,0,0.96)');
+    bg.addColorStop(1, 'rgba(60,30,0,0.96)');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, w, h);
+
+    // Title
+    ctx.textAlign = 'center';
+    ctx.shadowColor = '#FFD700';
+    ctx.shadowBlur  = 24;
+    ctx.fillStyle   = '#FFD700';
+    ctx.font        = 'bold 64px Georgia, serif';
+    ctx.fillText('SIEG!', w / 2, h * 0.28);
+    ctx.shadowBlur  = 0;
+
+    ctx.fillStyle = '#FFE88A';
+    ctx.font      = 'bold 22px Georgia, serif';
+    ctx.fillText('Du hast Bayern gerettet!', w / 2, h * 0.40);
+
+    // Score panel
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.beginPath(); ctx.roundRect(w/2 - 160, h*0.47, 320, 100, 10); ctx.fill();
+    ctx.strokeStyle = '#FFD700'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.roundRect(w/2 - 160, h*0.47, 320, 100, 10); ctx.stroke();
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 20px Georgia, serif';
+    ctx.fillText('Punkte: ' + score, w / 2, h * 0.47 + 38);
+    ctx.font = '16px Georgia, serif';
+    ctx.fillStyle = '#FFD700';
+    ctx.fillText('Highscore: ' + highscore, w / 2, h * 0.47 + 66);
+    if (isNewHighscore) {
+      ctx.fillStyle = '#FFAA00';
+      ctx.font = 'bold 15px Georgia, serif';
+      ctx.fillText('Neuer Rekord!', w / 2, h * 0.47 + 90);
+    }
+
+    // Footer
+    ctx.fillStyle = 'rgba(255,255,255,0.65)';
+    ctx.font      = '15px Georgia, serif';
+    ctx.fillText('Enter oder Klick für Hauptmenü', w / 2, h * 0.88);
+    ctx.textAlign = 'left';
+    ctx.shadowBlur = 0;
+  }
+
   return {
     SKINS,
     drawBackground,
@@ -1010,5 +1254,8 @@ const Renderer = (() => {
     drawPlayerTrail,
     drawScorePopups,
     drawLevelBanner,
+    drawBossHpBar,
+    drawPowerUpHUD,
+    drawGameComplete,
   };
 })();

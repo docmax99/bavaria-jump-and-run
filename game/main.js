@@ -1,5 +1,5 @@
 // Game loop & state machine
-// States: MENU | PLAYING | LEVEL_COMPLETE | GAME_OVER
+// States: MENU | PLAYING | LEVEL_COMPLETE | GAME_OVER | GAME_COMPLETE
 
 const CANVAS_W = 800;
 const CANVAS_H = 480;
@@ -9,6 +9,7 @@ const STATE = {
   PLAYING:        'playing',
   LEVEL_COMPLETE: 'level_complete',
   GAME_OVER:      'game_over',
+  GAME_COMPLETE:  'game_complete',
 };
 
 const Game = (() => {
@@ -120,7 +121,7 @@ const Game = (() => {
       setState(STATE.PLAYING);
     } else {
       checkHighscore();
-      setState(STATE.MENU);
+      setState(STATE.GAME_COMPLETE);
       Audio.stopMusic();
     }
   }
@@ -156,7 +157,7 @@ const Game = (() => {
       return;
     }
 
-    if (state === STATE.LEVEL_COMPLETE || state === STATE.GAME_OVER) {
+    if (state === STATE.LEVEL_COMPLETE || state === STATE.GAME_OVER || state === STATE.GAME_COMPLETE) {
       if ((Input.enter() || clickedThisFrame) && stateTimer > 40) {
         clickedThisFrame = false;
         Input.clearEnter();
@@ -219,18 +220,31 @@ const Game = (() => {
 
     // ── Collectibles ──────────────────────────────────────────────────────
     const wasCollected = level.collectibles.map(c => c.collected);
-    const { points, livesGained } = Player.checkCollectibles(player, level);
+    const { points, livesGained, speedBoost, flyBoost } = Player.checkCollectibles(player, level);
     score += points;
     lives += livesGained;
+    if (speedBoost) {
+      player.speedTimer = 300;
+      scorePopups.push({ x: player.x + 12, y: player.y - 10, text: 'SPEED!', life: 70, maxLife: 70 });
+      Particles.spawn(player.x + player.w / 2, player.y + player.h / 2, 14, '#FFE020', 4, 28);
+    }
+    if (flyBoost) {
+      player.flyTimer = 180;
+      scorePopups.push({ x: player.x + 12, y: player.y - 10, text: 'FLY!', life: 70, maxLife: 70 });
+      Particles.spawn(player.x + player.w / 2, player.y + player.h / 2, 14, '#AAEEFF', 4, 28);
+    }
     level.collectibles.forEach((c, i) => {
       if (!wasCollected[i] && c.collected) {
-        const col = c.type === 'pretzel' ? '#FFD700' : '#FF8888';
+        const col = c.type === 'pretzel'   ? '#FFD700'
+                  : c.type === 'mug'        ? '#FF8888'
+                  : c.type === 'speedboost' ? '#FFE020'
+                  :                           '#AAEEFF';
         Particles.spawn(c.x, c.y, 10, col, 3, 22);
-        scorePopups.push({
-          x: c.x, y: c.y - 10,
-          text: c.type === 'pretzel' ? '+10' : '+♥',
-          life: 55, maxLife: 55,
-        });
+        if (c.type === 'pretzel') {
+          scorePopups.push({ x: c.x, y: c.y - 10, text: '+10', life: 55, maxLife: 55 });
+        } else if (c.type === 'mug') {
+          scorePopups.push({ x: c.x, y: c.y - 10, text: '+♥', life: 55, maxLife: 55 });
+        }
       }
     });
 
@@ -239,11 +253,13 @@ const Game = (() => {
     const { hit } = Player.checkEnemies(player, level);
     level.enemies.forEach((e, i) => {
       if (wasAlive[i] && !e.alive) {
-        Particles.spawn(e.x, e.y - 14, 12, '#CC2200', 4, 28);
-        triggerShake(7, 4);
-        hitPauseFrames = 5;
-        score += 50;
-        scorePopups.push({ x: e.x, y: e.y - 30, text: '+50', life: 55, maxLife: 55 });
+        const isBoss = !!e.isBoss;
+        const pts    = isBoss ? 500 : 50;
+        Particles.spawn(e.x, e.y - 14, isBoss ? 30 : 12, isBoss ? '#FFD700' : '#CC2200', isBoss ? 6 : 4, isBoss ? 50 : 28);
+        triggerShake(isBoss ? 18 : 7, isBoss ? 10 : 4);
+        hitPauseFrames = isBoss ? 12 : 5;
+        score += pts;
+        scorePopups.push({ x: e.x, y: e.y - 30, text: '+' + pts, life: 55, maxLife: 55 });
       }
     });
 
@@ -284,6 +300,15 @@ const Game = (() => {
 
     // Reached goal?
     if (player.x + player.w >= level.goalX) {
+      // Gate: must defeat boss first on boss level
+      const bossAlive = level.enemies.some(e => e.isBoss && e.alive);
+      if (bossAlive) {
+        if (!level._bossHintShown) {
+          level._bossHintShown = true;
+          scorePopups.push({ x: player.x, y: player.y - 40, text: 'Besiege den Endgegner!', life: 120, maxLife: 120 });
+        }
+        return;
+      }
       score += 100 * (levelIndex + 1);
       Audio.sfxLevelComplete();
       setState(STATE.LEVEL_COMPLETE);
@@ -339,13 +364,22 @@ const Game = (() => {
       Renderer.drawLevelBanner(ctx, level.name, Math.min(1, levelBannerAlpha), CANVAS_W, CANVAS_H);
     }
 
+    // Boss HP bar (level 7)
+    if (level && level.index === 6) {
+      const boss = level.enemies.find(e => e.isBoss);
+      if (boss) Renderer.drawBossHpBar(ctx, boss, CANVAS_W, CANVAS_H);
+    }
+
+    // Power-up HUD
+    if (player) Renderer.drawPowerUpHUD(ctx, player, CANVAS_W);
+
     if (state === STATE.LEVEL_COMPLETE) {
       const nextName = levelIndex + 1 < LEVELS.length ? LEVELS[levelIndex + 1].name : null;
       Renderer.drawLevelComplete(ctx, CANVAS_W, CANVAS_H, level.name, score, nextName, highscore, isNewHighscore);
     } else if (state === STATE.GAME_OVER) {
       Renderer.drawGameOver(ctx, CANVAS_W, CANVAS_H, score, highscore, isNewHighscore);
-    } else {
-      Renderer.drawPauseHint(ctx, CANVAS_W);
+    } else if (state === STATE.GAME_COMPLETE) {
+      Renderer.drawGameComplete(ctx, CANVAS_W, CANVAS_H, score, highscore, isNewHighscore);
     }
   }
 
