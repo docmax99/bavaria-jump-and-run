@@ -254,11 +254,49 @@ const Level = {
   },
 
   updateEnemies(level) {
+    const { map, gravity } = level;
     level.enemies.forEach(e => {
       if (!e.alive) return;
+
+      // ── Gravity ───────────────────────────────────────────────────────
+      e.vy = (e.vy || 0) + gravity;
+      if (e.vy > 18) e.vy = 18;
+
+      // ── Move Y + ground collision ─────────────────────────────────────
+      e.y += e.vy;
+      let onGround = false;
+      if (e.vy >= 0) {
+        const checkCols = [e.x - 8, e.x, e.x + 8];
+        for (const px of checkCols) {
+          const col = Math.floor(px / TILE_SIZE);
+          const row = Math.floor(e.y / TILE_SIZE);
+          const t   = Level.getTile(map, row, col);
+          if (Level.isSolid(t) || Level.isPassthrough(t)) {
+            e.y = row * TILE_SIZE;
+            e.vy = 0;
+            onGround = true;
+            break;
+          }
+        }
+      }
+
+      // ── Move X ────────────────────────────────────────────────────────
       e.x += e.vx;
+
+      // Turn at patrol bounds
       if (e.x <= e.minX) { e.x = e.minX; e.vx = Math.abs(e.vx); }
       if (e.x >= e.maxX) { e.x = e.maxX; e.vx = -Math.abs(e.vx); }
+
+      // Turn at platform edges (no ground ahead → don't walk off)
+      if (onGround) {
+        const groundRow = Math.floor(e.y / TILE_SIZE);
+        const aheadX    = e.x + (e.vx > 0 ? 16 : -16);
+        const aheadCol  = Math.floor(aheadX / TILE_SIZE);
+        const tileAhead = Level.getTile(map, groundRow, aheadCol);
+        if (!Level.isSolid(tileAhead) && !Level.isPassthrough(tileAhead)) {
+          e.vx = -e.vx;
+        }
+      }
     });
   },
 };
