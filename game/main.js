@@ -29,10 +29,20 @@ const Game = (() => {
   window.addEventListener('resize', resize);
 
   // ── State ─────────────────────────────────────────────────────────────
-  let state      = STATE.MENU;
-  let levelIndex = 0;
-  let lives      = 3;
-  let score      = 0;
+  let state          = STATE.MENU;
+  let levelIndex     = 0;
+  let lives          = 3;
+  let score          = 0;
+  let highscore      = parseInt(localStorage.getItem('bavaria_highscore') || '0');
+  let isNewHighscore = false;
+
+  function checkHighscore() {
+    if (score > highscore) {
+      highscore = score;
+      localStorage.setItem('bavaria_highscore', highscore);
+      isNewHighscore = true;
+    }
+  }
   let level      = null;
   let player     = null;
   let camX       = 0;
@@ -71,9 +81,10 @@ const Game = (() => {
   // ── Game flow ─────────────────────────────────────────────────────────
   function startGame() {
     Audio.resume();
-    levelIndex = 0;
-    lives      = 3;
-    score      = 0;
+    levelIndex     = 0;
+    lives          = 3;
+    score          = 0;
+    isNewHighscore = false;
     loadLevel(0);
     setState(STATE.PLAYING);
     Audio.startMusic();
@@ -106,6 +117,7 @@ const Game = (() => {
       loadLevel(levelIndex);
       setState(STATE.PLAYING);
     } else {
+      checkHighscore();
       setState(STATE.MENU);
       Audio.stopMusic();
     }
@@ -238,6 +250,7 @@ const Game = (() => {
       if (lives <= 0) {
         Audio.sfxGameOver();
         Audio.stopMusic();
+        checkHighscore();
         setState(STATE.GAME_OVER);
         return;
       }
@@ -250,6 +263,7 @@ const Game = (() => {
       if (lives <= 0) {
         Audio.sfxGameOver();
         Audio.stopMusic();
+        checkHighscore();
         setState(STATE.GAME_OVER);
       } else {
         player = Player.create(64, (Level.ROWS - 4) * TILE_SIZE);
@@ -290,7 +304,7 @@ const Game = (() => {
       ctx.fillStyle = '#87CEEB';
       ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
       Renderer.drawBackground(ctx, 'village', 0, CANVAS_W, CANVAS_H);
-      Renderer.drawMenu(ctx, CANVAS_W, CANVAS_H);
+      Renderer.drawMenu(ctx, CANVAS_W, CANVAS_H, highscore);
       return;
     }
 
@@ -318,9 +332,9 @@ const Game = (() => {
 
     if (state === STATE.LEVEL_COMPLETE) {
       const nextName = levelIndex + 1 < LEVELS.length ? LEVELS[levelIndex + 1].name : null;
-      Renderer.drawLevelComplete(ctx, CANVAS_W, CANVAS_H, level.name, score, nextName);
+      Renderer.drawLevelComplete(ctx, CANVAS_W, CANVAS_H, level.name, score, nextName, highscore, isNewHighscore);
     } else if (state === STATE.GAME_OVER) {
-      Renderer.drawGameOver(ctx, CANVAS_W, CANVAS_H, score);
+      Renderer.drawGameOver(ctx, CANVAS_W, CANVAS_H, score, highscore, isNewHighscore);
     } else {
       Renderer.drawPauseHint(ctx, CANVAS_W);
     }
