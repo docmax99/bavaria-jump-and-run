@@ -35,6 +35,8 @@ const Game = (() => {
   let score          = 0;
   let highscore      = parseInt(localStorage.getItem('bavaria_highscore') || '0');
   let isNewHighscore = false;
+  let selectedSkin   = parseInt(localStorage.getItem('bavaria_skin') || '0');
+  let skinCooldown   = 0;
 
   function checkHighscore() {
     if (score > highscore) {
@@ -139,6 +141,13 @@ const Game = (() => {
     stateTimer++;
 
     if (state === STATE.MENU) {
+      // Skin cycling with left/right (debounced)
+      if (skinCooldown > 0) skinCooldown--;
+      if (skinCooldown === 0) {
+        const skinCount = Renderer.SKINS.length;
+        if (Input.left())  { selectedSkin = (selectedSkin - 1 + skinCount) % skinCount; skinCooldown = 12; localStorage.setItem('bavaria_skin', selectedSkin); }
+        if (Input.right()) { selectedSkin = (selectedSkin + 1)              % skinCount; skinCooldown = 12; localStorage.setItem('bavaria_skin', selectedSkin); }
+      }
       if ((Input.enter() || clickedThisFrame) && stateTimer > 10) {
         clickedThisFrame = false;
         Input.clearEnter();
@@ -304,7 +313,7 @@ const Game = (() => {
       ctx.fillStyle = '#87CEEB';
       ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
       Renderer.drawBackground(ctx, 'village', 0, CANVAS_W, CANVAS_H);
-      Renderer.drawMenu(ctx, CANVAS_W, CANVAS_H, highscore);
+      Renderer.drawMenu(ctx, CANVAS_W, CANVAS_H, highscore, selectedSkin);
       return;
     }
 
@@ -322,7 +331,7 @@ const Game = (() => {
     Renderer.drawCollectibles(ctx, level, dcamX, dcamY, tick);
     Renderer.drawEnemies(ctx, level, dcamX, dcamY, tick);
     Renderer.drawPlayerTrail(ctx, playerTrail, dcamX, dcamY);
-    Renderer.drawPlayer(ctx, player, dcamX, dcamY, tick);
+    Renderer.drawPlayer(ctx, player, dcamX, dcamY, tick, selectedSkin);
     Particles.draw(ctx, dcamX, dcamY);
     Renderer.drawScorePopups(ctx, scorePopups, dcamX, dcamY);
 

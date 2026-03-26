@@ -30,6 +30,56 @@ const Renderer = (() => {
     },
   };
 
+  // ── Skins ─────────────────────────────────────────────────────────────
+  const SKINS = [
+    { name: 'Hans',    hat: '#2E5A2E', hatBand: '#CC5500', lederhosen: '#8B6914', bib: '#A0780A', shirt: '#E8E8D8', hair: '#5C3A1E', shoes: '#3B2800' },
+    { name: 'Liesl',   hat: '#AA2020', hatBand: '#FFB0B0', lederhosen: '#C05070', bib: '#D06080', shirt: '#FFFFFF', hair: '#C8A000', shoes: '#4A2010' },
+    { name: 'König',   hat: '#1A3A8A', hatBand: '#FFD700', lederhosen: '#1A3A8A', bib: '#2A4AAA', shirt: '#FFD700', hair: '#111111', shoes: '#111111' },
+    { name: 'Forst',   hat: '#1A1A1A', hatBand: '#446644', lederhosen: '#2A4A2A', bib: '#3A5A3A', shirt: '#CCCCCC', hair: '#222222', shoes: '#111111' },
+  ];
+
+  function drawMiniPlayer(ctx, skin, cx, cy) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    // Shoes
+    ctx.fillStyle = skin.shoes;
+    ctx.fillRect(-8, 0, 6, 4);
+    ctx.fillRect(2,  0, 6, 4);
+    // Legs
+    ctx.fillStyle = skin.lederhosen;
+    ctx.fillRect(-7, -10, 5, 10);
+    ctx.fillRect(2,  -10, 5, 10);
+    // Body bib
+    ctx.fillStyle = skin.bib;
+    ctx.fillRect(-7, -22, 14, 14);
+    // Suspenders
+    ctx.fillStyle = skin.lederhosen;
+    ctx.fillRect(-5, -22, 2, 12);
+    ctx.fillRect(3,  -22, 2, 12);
+    // Shirt
+    ctx.fillStyle = skin.shirt;
+    ctx.fillRect(-10, -22, 4, 9);
+    ctx.fillRect(6,   -22, 4, 9);
+    // Head
+    ctx.fillStyle = '#F4C2A0';
+    ctx.beginPath(); ctx.arc(0, -29, 7, 0, Math.PI * 2); ctx.fill();
+    // Hair
+    ctx.fillStyle = skin.hair;
+    ctx.beginPath(); ctx.arc(0, -30, 7, Math.PI, 0); ctx.fill();
+    // Eyes
+    ctx.fillStyle = '#333';
+    ctx.fillRect(-3, -31, 2, 2);
+    ctx.fillRect(1,  -31, 2, 2);
+    // Hat brim
+    ctx.fillStyle = skin.hat;
+    ctx.fillRect(-9, -38, 18, 5);
+    ctx.fillRect(-6, -44, 12, 7);
+    // Hat band
+    ctx.fillStyle = skin.hatBand;
+    ctx.fillRect(-6, -37, 12, 2);
+    ctx.restore();
+  }
+
   // ── Background ───────────────────────────────────────────────────────
   function drawBackground(ctx, theme, camX, canvasW, canvasH) {
     const t = THEMES[theme];
@@ -377,9 +427,10 @@ const Renderer = (() => {
   }
 
   // ── Player ────────────────────────────────────────────────────────────
-  function drawPlayer(ctx, player, camX, camY, tick) {
+  function drawPlayer(ctx, player, camX, camY, tick, skinIndex) {
     const sx = player.x - camX;
     const sy = player.y - camY;
+    const skin = SKINS[skinIndex] || SKINS[0];
 
     // Invincibility flicker
     if (player.invincible > 0 && Math.floor(player.invincible / 4) % 2 === 0) return;
@@ -403,7 +454,7 @@ const Renderer = (() => {
     ctx.translate(0, walkBob + airOffset);
 
     // Shoes
-    ctx.fillStyle = '#3B2800';
+    ctx.fillStyle = skin.shoes;
     ctx.fillRect(-10, -5, 9, 5);
     ctx.fillRect(2, -5, 9, 5);
 
@@ -411,7 +462,7 @@ const Renderer = (() => {
     const lLeg = player.onGround ? legSwing : 0;
     const rLeg = player.onGround ? -legSwing : 0;
 
-    ctx.fillStyle = '#8B6914';
+    ctx.fillStyle = skin.lederhosen;
     // Left leg
     ctx.save();
     ctx.translate(-5, -14);
@@ -426,15 +477,15 @@ const Renderer = (() => {
     ctx.restore();
 
     // Body — Lederhosen bib
-    ctx.fillStyle = '#A0780A';
+    ctx.fillStyle = skin.bib;
     ctx.fillRect(-9, -28, 18, 16);
     // Suspenders
-    ctx.fillStyle = '#8B6914';
+    ctx.fillStyle = skin.lederhosen;
     ctx.fillRect(-6, -28, 3, 14);
     ctx.fillRect(3,  -28, 3, 14);
 
     // Shirt sleeves
-    ctx.fillStyle = '#E8E8D8';
+    ctx.fillStyle = skin.shirt;
     ctx.fillRect(-13, -28, 7, 10);
     ctx.fillRect(6,   -28, 7, 10);
 
@@ -445,7 +496,7 @@ const Renderer = (() => {
     ctx.fill();
 
     // Hair
-    ctx.fillStyle = '#5C3A1E';
+    ctx.fillStyle = skin.hair;
     ctx.fillRect(-9, -45, 18, 10);
     ctx.beginPath();
     ctx.arc(0, -44, 9, Math.PI, 0);
@@ -467,10 +518,10 @@ const Renderer = (() => {
     ctx.stroke();
 
     // Hat — Bavarian
-    ctx.fillStyle = '#2E5A2E';
+    ctx.fillStyle = skin.hat;
     ctx.fillRect(-11, -53, 22, 7);
     ctx.fillRect(-8,  -59, 16, 8);
-    ctx.fillStyle = '#CC5500';
+    ctx.fillStyle = skin.hatBand;
     ctx.fillRect(-8, -52, 16, 2); // hat band
     // Feather
     ctx.fillStyle = '#F0F0F0';
@@ -480,7 +531,7 @@ const Renderer = (() => {
 
     // Jump pose — arms up
     if (!player.onGround) {
-      ctx.fillStyle = '#E8E8D8';
+      ctx.fillStyle = skin.shirt;
       ctx.save(); ctx.translate(-13, -30); ctx.rotate(-0.6); ctx.fillRect(-3, -8, 6, 10); ctx.restore();
       ctx.save(); ctx.translate(13, -30);  ctx.rotate(0.6);  ctx.fillRect(-3, -8, 6, 10); ctx.restore();
     }
@@ -535,7 +586,7 @@ const Renderer = (() => {
   }
 
   // ── Overlay screens ───────────────────────────────────────────────────
-  function drawMenu(ctx, w, h, highscore) {
+  function drawMenu(ctx, w, h, highscore, selectedSkin) {
     // Dark vignette overlay
     const vgrd = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w * 0.8);
     vgrd.addColorStop(0,   'rgba(10,4,0,0.55)');
@@ -591,7 +642,7 @@ const Renderer = (() => {
     ctx.fillText('◆  ◆  ◆', w / 2, h * 0.49);
 
     // Controls panel
-    const bx = w/2 - 200, by = h * 0.51, bw2 = 400, bh2 = 144;
+    const bx = w/2 - 200, by = h * 0.51, bw2 = 400, bh2 = 92;
     const boxGrd = ctx.createLinearGradient(bx, by, bx, by + bh2);
     boxGrd.addColorStop(0, 'rgba(100,55,8,0.72)');
     boxGrd.addColorStop(1, 'rgba(20,8,1,0.78)');
@@ -605,23 +656,55 @@ const Renderer = (() => {
     ctx.beginPath(); ctx.roundRect(bx+1, by+1, bw2-2, bh2-2, 5); ctx.stroke();
 
     ctx.textAlign = 'center';
-    ctx.font = '700 13px "Cinzel", Georgia, serif';
+    ctx.font = '700 12px "Cinzel", Georgia, serif';
     ctx.fillStyle = '#FFE07A';
-    ctx.fillText('STEUERUNG', w/2, by + 24);
-    ctx.font = '14px "Crimson Text", Georgia, serif';
+    ctx.fillText('STEUERUNG', w/2, by + 20);
+    ctx.font = '13px "Crimson Text", Georgia, serif';
     ctx.fillStyle = 'rgba(255,224,122,0.8)';
     const lines = [
-      '← → / A D  —  Bewegen',
-      'Leertaste / ↑ / W  —  Springen',
+      '← → / A D  —  Bewegen       Leertaste / ↑  —  Springen',
       '🥨 Brezel = 10 Pkt   🍺 Maßkrug = Extra-Leben',
-      'Auf Gegner springen  =  besiegen!',
+      'Auf Gegner springen = besiegen!   ESC = Menü',
     ];
-    lines.forEach((l, i) => ctx.fillText(l, w/2, by + 50 + i * 26));
+    lines.forEach((l, i) => ctx.fillText(l, w/2, by + 42 + i * 20));
+
+    // ── Skin selector ───────────────────────────────────────────────────
+    const skinY   = by + bh2 + 8;
+    const skinBW  = 88, skinBH = 66, skinGap = 6;
+    const skinTot = SKINS.length * skinBW + (SKINS.length - 1) * skinGap;
+    const skinX0  = (w - skinTot) / 2;
+
+    ctx.textAlign = 'center';
+    ctx.font = '9px "Cinzel", Georgia, serif';
+    ctx.fillStyle = 'rgba(200,146,42,0.55)';
+    ctx.fillText('◀  CHARAKTER WÄHLEN  ▶', w/2, skinY - 2);
+
+    for (let i = 0; i < SKINS.length; i++) {
+      const bxi = skinX0 + i * (skinBW + skinGap);
+      const sel  = i === (selectedSkin || 0);
+      const bgG  = ctx.createLinearGradient(bxi, skinY+4, bxi, skinY+4+skinBH);
+      bgG.addColorStop(0, 'rgba(100,55,8,0.72)');
+      bgG.addColorStop(1, 'rgba(20,8,1,0.78)');
+      ctx.fillStyle = bgG;
+      ctx.beginPath(); ctx.roundRect(bxi, skinY+4, skinBW, skinBH, 4); ctx.fill();
+      ctx.strokeStyle = sel ? 'rgba(255,220,80,0.95)' : 'rgba(200,146,42,0.3)';
+      ctx.lineWidth   = sel ? 2 : 1;
+      ctx.beginPath(); ctx.roundRect(bxi, skinY+4, skinBW, skinBH, 4); ctx.stroke();
+      if (sel) {
+        ctx.fillStyle = 'rgba(255,240,100,0.06)';
+        ctx.beginPath(); ctx.roundRect(bxi, skinY+4, skinBW, skinBH, 4); ctx.fill();
+      }
+      drawMiniPlayer(ctx, SKINS[i], bxi + skinBW/2, skinY + 4 + skinBH - 14);
+      ctx.textAlign = 'center';
+      ctx.font = sel ? '700 8px "Cinzel", Georgia, serif' : '8px "Cinzel", Georgia, serif';
+      ctx.fillStyle = sel ? '#FFE07A' : 'rgba(200,146,42,0.6)';
+      ctx.fillText(SKINS[i].name.toUpperCase(), bxi + skinBW/2, skinY + 4 + skinBH - 3);
+    }
 
     // Pulsing start button
     const pulse = 0.97 + Math.sin(Date.now() * 0.004) * 0.03;
     ctx.save();
-    ctx.translate(w / 2, h * 0.84);
+    ctx.translate(w / 2, skinY + 4 + skinBH + 36);
     ctx.scale(pulse, pulse);
     const btnGrd = ctx.createLinearGradient(-120, -24, -120, 24);
     btnGrd.addColorStop(0, 'rgba(220,155,30,0.96)');
@@ -640,14 +723,10 @@ const Renderer = (() => {
     ctx.restore();
 
     if (highscore > 0) {
-      ctx.fillStyle = 'rgba(255,224,122,0.75)';
-      ctx.font = '13px "Cinzel", Georgia, serif';
-      ctx.fillText('🏆  Rekord: ' + highscore, w / 2, h * 0.91);
+      ctx.fillStyle = 'rgba(255,224,122,0.65)';
+      ctx.font = '11px "Cinzel", Georgia, serif';
+      ctx.fillText('🏆  Rekord: ' + highscore, w / 2, skinY + 4 + skinBH + 82);
     }
-
-    ctx.fillStyle = 'rgba(200,146,42,0.5)';
-    ctx.font = '12px "Crimson Text", Georgia, serif';
-    ctx.fillText('Enter oder Klick zum Starten', w / 2, h * 0.97);
     ctx.textAlign = 'left';
   }
 
@@ -870,6 +949,7 @@ const Renderer = (() => {
   }
 
   return {
+    SKINS,
     drawBackground,
     drawTilemap,
     drawCollectibles,
