@@ -607,125 +607,172 @@ const Renderer = (() => {
     ctx.font = '11px "Cinzel", Georgia, serif';
     ctx.fillStyle = '#C8922A';
     ctx.textAlign = 'center';
-    ctx.fillText('✦  BAVARIAN ADVENTURE  ✦', w / 2, h * 0.22);
+    ctx.fillText('✦  BAVARIAN ADVENTURE  ✦', w / 2, h * 0.17);
 
     // Main title
     ctx.save();
-    ctx.font = '700 58px "Cinzel Decorative", Georgia, serif';
+    ctx.font = '700 52px "Cinzel Decorative", Georgia, serif';
     ctx.textAlign = 'center';
     ctx.shadowColor = '#6B3C10';
     ctx.shadowBlur = 24;
     ctx.shadowOffsetY = 4;
     ctx.strokeStyle = '#6B3C10';
     ctx.lineWidth = 3;
-    ctx.strokeText('BAVARIA', w / 2, h * 0.34);
-    const tgrd = ctx.createLinearGradient(0, h * 0.27, 0, h * 0.36);
+    ctx.strokeText('BAVARIA', w / 2, h * 0.28);
+    const tgrd = ctx.createLinearGradient(0, h * 0.20, 0, h * 0.30);
     tgrd.addColorStop(0, '#FFE07A');
     tgrd.addColorStop(0.5, '#C8922A');
     tgrd.addColorStop(1, '#FFE07A');
     ctx.fillStyle = tgrd;
-    ctx.fillText('BAVARIA', w / 2, h * 0.34);
+    ctx.fillText('BAVARIA', w / 2, h * 0.28);
     ctx.shadowBlur = 0;
     ctx.shadowOffsetY = 0;
-    ctx.font = '400 22px "Cinzel", Georgia, serif';
+    ctx.font = '400 20px "Cinzel", Georgia, serif';
     ctx.fillStyle = '#DDB86A';
-    ctx.fillText('JUMP  &  RUN', w / 2, h * 0.41);
+    ctx.fillText('JUMP  &  RUN', w / 2, h * 0.35);
     ctx.restore();
 
     // Gold rule below title
     ctx.fillStyle = ruleGrd;
-    ctx.fillRect(0, h * 0.45, w, 1.5);
+    ctx.fillRect(0, h * 0.39, w, 1.5);
 
-    ctx.fillStyle = '#C8922A';
-    ctx.textAlign = 'center';
-    ctx.font = '10px Georgia';
-    ctx.fillText('◆  ◆  ◆', w / 2, h * 0.49);
+    // ── Two-column layout ────────────────────────────────────────────────
+    const colY  = h * 0.42;       // top of both panels
+    const colH  = h * 0.46;       // panel height
+    const colW  = w / 2 - 30;     // each column width
+    const colPad = 20;            // horizontal padding from edges
 
-    // Controls panel
-    const bx = w/2 - 200, by = h * 0.51, bw2 = 400, bh2 = 92;
-    const boxGrd = ctx.createLinearGradient(bx, by, bx, by + bh2);
-    boxGrd.addColorStop(0, 'rgba(100,55,8,0.72)');
-    boxGrd.addColorStop(1, 'rgba(20,8,1,0.78)');
-    ctx.fillStyle = boxGrd;
-    ctx.beginPath(); ctx.roundRect(bx, by, bw2, bh2, 6); ctx.fill();
-    ctx.strokeStyle = 'rgba(200,146,42,0.45)';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.roundRect(bx, by, bw2, bh2, 6); ctx.stroke();
-    ctx.strokeStyle = 'rgba(255,225,100,0.12)';
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.roundRect(bx+1, by+1, bw2-2, bh2-2, 5); ctx.stroke();
+    function drawPanel(px, py, pw, ph) {
+      const pgrd = ctx.createLinearGradient(px, py, px, py + ph);
+      pgrd.addColorStop(0, 'rgba(100,55,8,0.70)');
+      pgrd.addColorStop(1, 'rgba(20,8,1,0.80)');
+      ctx.fillStyle = pgrd;
+      ctx.beginPath(); ctx.roundRect(px, py, pw, ph, 6); ctx.fill();
+      ctx.strokeStyle = 'rgba(200,146,42,0.45)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.roundRect(px, py, pw, ph, 6); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,225,100,0.10)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.roundRect(px+1, py+1, pw-2, ph-2, 5); ctx.stroke();
+    }
+
+    // ── Left panel: Controls ─────────────────────────────────────────────
+    const lx = colPad, lw = colW;
+    drawPanel(lx, colY, lw, colH);
 
     ctx.textAlign = 'center';
     ctx.font = '700 12px "Cinzel", Georgia, serif';
     ctx.fillStyle = '#FFE07A';
-    ctx.fillText('STEUERUNG', w/2, by + 20);
-    ctx.font = '13px "Crimson Text", Georgia, serif';
-    ctx.fillStyle = 'rgba(255,224,122,0.8)';
-    const lines = [
-      '← → / A D  —  Bewegen       Leertaste / ↑  —  Springen',
-      '🥨 Brezel = 10 Pkt   🍺 Maßkrug = Extra-Leben',
-      'Auf Gegner springen = besiegen!   ESC = Menü',
-    ];
-    lines.forEach((l, i) => ctx.fillText(l, w/2, by + 42 + i * 20));
+    ctx.fillText('STEUERUNG', lx + lw/2, colY + 22);
 
-    // ── Skin selector ───────────────────────────────────────────────────
-    const skinY   = by + bh2 + 8;
-    const skinBW  = 88, skinBH = 66, skinGap = 6;
-    const skinTot = SKINS.length * skinBW + (SKINS.length - 1) * skinGap;
-    const skinX0  = (w - skinTot) / 2;
+    ctx.font = '13px "Crimson Text", Georgia, serif';
+    ctx.fillStyle = 'rgba(255,224,122,0.85)';
+    const ctrlLines = [
+      '← → / A D',
+      'Bewegen',
+      'Leertaste / ↑',
+      'Springen',
+      '🥨 Brezel = 10 Pkt',
+      '🍺 Maßkrug = Leben',
+      'Auf Gegner springen',
+      '= besiegen!',
+      'Doppelsprung möglich',
+      'ESC = Menü',
+    ];
+    // Draw as two sub-columns inside left panel
+    const subLines = [
+      ['← → / A D',       'Bewegen'],
+      ['Leertaste / ↑',   'Springen'],
+      ['🥨 Brezel',        '= 10 Pkt'],
+      ['🍺 Maßkrug',       '= Leben'],
+      ['Gegner springen',  '= besiegen'],
+    ];
+    ctx.font = '12px "Crimson Text", Georgia, serif';
+    ctx.fillStyle = 'rgba(255,224,122,0.85)';
+    subLines.forEach(([left, right], i) => {
+      const lineY = colY + 44 + i * 22;
+      ctx.textAlign = 'right';
+      ctx.fillText(left,  lx + lw/2 - 6,  lineY);
+      ctx.fillStyle = 'rgba(200,146,42,0.6)';
+      ctx.fillText('—',   lx + lw/2,       lineY);
+      ctx.fillStyle = 'rgba(255,224,122,0.85)';
+      ctx.textAlign = 'left';
+      ctx.fillText(right, lx + lw/2 + 6,  lineY);
+    });
+    ctx.textAlign = 'center';
+    ctx.font = '11px "Crimson Text", Georgia, serif';
+    ctx.fillStyle = 'rgba(200,146,42,0.55)';
+    ctx.fillText('Doppelsprung & Wandsprung', lx + lw/2, colY + colH - 12);
+
+    // ── Right panel: Skin selector ───────────────────────────────────────
+    const rx = w/2 + 10, rw = colW;
+    drawPanel(rx, colY, rw, colH);
 
     ctx.textAlign = 'center';
+    ctx.font = '700 12px "Cinzel", Georgia, serif';
+    ctx.fillStyle = '#FFE07A';
+    ctx.fillText('CHARAKTER', rx + rw/2, colY + 22);
     ctx.font = '9px "Cinzel", Georgia, serif';
-    ctx.fillStyle = 'rgba(200,146,42,0.55)';
-    ctx.fillText('◀  CHARAKTER WÄHLEN  ▶', w/2, skinY - 2);
+    ctx.fillStyle = 'rgba(200,146,42,0.5)';
+    ctx.fillText('◀ wählen mit ← → ▶', rx + rw/2, colY + 36);
+
+    // 2×2 grid of skin boxes
+    const skinBW = (rw - 30) / 2;  // ~170px each
+    const skinBH = (colH - 52) / 2 - 4;  // ~85px each
+    const skinGapX = 10, skinGapY = 6;
 
     for (let i = 0; i < SKINS.length; i++) {
-      const bxi = skinX0 + i * (skinBW + skinGap);
-      const sel  = i === (selectedSkin || 0);
-      const bgG  = ctx.createLinearGradient(bxi, skinY+4, bxi, skinY+4+skinBH);
+      const col = i % 2, row = Math.floor(i / 2);
+      const bxi = rx + 10 + col * (skinBW + skinGapX);
+      const byi = colY + 44 + row * (skinBH + skinGapY);
+      const sel = i === (selectedSkin || 0);
+
+      const bgG = ctx.createLinearGradient(bxi, byi, bxi, byi + skinBH);
       bgG.addColorStop(0, 'rgba(100,55,8,0.72)');
       bgG.addColorStop(1, 'rgba(20,8,1,0.78)');
       ctx.fillStyle = bgG;
-      ctx.beginPath(); ctx.roundRect(bxi, skinY+4, skinBW, skinBH, 4); ctx.fill();
-      ctx.strokeStyle = sel ? 'rgba(255,220,80,0.95)' : 'rgba(200,146,42,0.3)';
+      ctx.beginPath(); ctx.roundRect(bxi, byi, skinBW, skinBH, 4); ctx.fill();
+      ctx.strokeStyle = sel ? 'rgba(255,220,80,0.95)' : 'rgba(200,146,42,0.28)';
       ctx.lineWidth   = sel ? 2 : 1;
-      ctx.beginPath(); ctx.roundRect(bxi, skinY+4, skinBW, skinBH, 4); ctx.stroke();
+      ctx.beginPath(); ctx.roundRect(bxi, byi, skinBW, skinBH, 4); ctx.stroke();
       if (sel) {
-        ctx.fillStyle = 'rgba(255,240,100,0.06)';
-        ctx.beginPath(); ctx.roundRect(bxi, skinY+4, skinBW, skinBH, 4); ctx.fill();
+        ctx.fillStyle = 'rgba(255,240,100,0.07)';
+        ctx.beginPath(); ctx.roundRect(bxi, byi, skinBW, skinBH, 4); ctx.fill();
       }
-      drawMiniPlayer(ctx, SKINS[i], bxi + skinBW/2, skinY + 4 + skinBH - 14);
+      drawMiniPlayer(ctx, SKINS[i], bxi + skinBW/2, byi + skinBH - 14);
       ctx.textAlign = 'center';
-      ctx.font = sel ? '700 8px "Cinzel", Georgia, serif' : '8px "Cinzel", Georgia, serif';
+      ctx.font = sel ? '700 9px "Cinzel", Georgia, serif' : '9px "Cinzel", Georgia, serif';
       ctx.fillStyle = sel ? '#FFE07A' : 'rgba(200,146,42,0.6)';
-      ctx.fillText(SKINS[i].name.toUpperCase(), bxi + skinBW/2, skinY + 4 + skinBH - 3);
+      ctx.fillText(SKINS[i].name.toUpperCase(), bxi + skinBW/2, byi + skinBH - 3);
     }
 
-    // Pulsing start button
+    // ── Start button ─────────────────────────────────────────────────────
+    const btnY = colY + colH + 16;
     const pulse = 0.97 + Math.sin(Date.now() * 0.004) * 0.03;
     ctx.save();
-    ctx.translate(w / 2, skinY + 4 + skinBH + 36);
+    ctx.translate(w / 2, btnY + 22);
     ctx.scale(pulse, pulse);
-    const btnGrd = ctx.createLinearGradient(-120, -24, -120, 24);
+    const btnGrd = ctx.createLinearGradient(-130, -22, -130, 22);
     btnGrd.addColorStop(0, 'rgba(220,155,30,0.96)');
     btnGrd.addColorStop(1, 'rgba(100,55,8,0.96)');
     ctx.fillStyle = btnGrd;
-    ctx.beginPath(); ctx.roundRect(-120, -24, 240, 48, 6); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(-130, -22, 260, 44, 6); ctx.fill();
     ctx.strokeStyle = 'rgba(255,225,100,0.7)';
     ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.roundRect(-120, -24, 240, 48, 6); ctx.stroke();
+    ctx.beginPath(); ctx.roundRect(-130, -22, 260, 44, 6); ctx.stroke();
     ctx.shadowColor = 'rgba(200,140,20,0.6)';
     ctx.shadowBlur = 18;
     ctx.fillStyle = '#1A0A01';
-    ctx.font = '700 17px "Cinzel", Georgia, serif';
+    ctx.font = '700 16px "Cinzel", Georgia, serif';
     ctx.fillText('▶  SPIEL STARTEN', 0, 6);
     ctx.shadowBlur = 0;
     ctx.restore();
 
     if (highscore > 0) {
-      ctx.fillStyle = 'rgba(255,224,122,0.65)';
-      ctx.font = '11px "Cinzel", Georgia, serif';
-      ctx.fillText('🏆  Rekord: ' + highscore, w / 2, skinY + 4 + skinBH + 82);
+      ctx.textAlign = 'center';
+      ctx.fillStyle = 'rgba(255,224,122,0.55)';
+      ctx.font = '10px "Cinzel", Georgia, serif';
+      ctx.fillText('🏆  Rekord: ' + highscore, w / 2, btnY + 54);
     }
     ctx.textAlign = 'left';
   }
