@@ -127,23 +127,27 @@ const LEVEL2_MOVING = [
 // { x, y, type: 'pretzel'|'mug' }
 function makeCollectibles(levelIndex) {
   if (levelIndex === 0) return [
-    {x:180,y:320,type:'pretzel'},{x:320,y:320,type:'pretzel'},{x:420,y:288,type:'pretzel'},
-    {x:550,y:256,type:'pretzel'},{x:700,y:224,type:'pretzel'},{x:900,y:192,type:'pretzel'},
-    {x:1100,y:160,type:'mug'},{x:1300,y:128,type:'pretzel'},{x:1500,y:96,type:'pretzel'},
-    {x:250,y:320,type:'pretzel'},{x:650,y:320,type:'pretzel'},{x:1000,y:288,type:'pretzel'},
+    // y = platform_surface - 40  (eye level above platform)
+    // ground row14=448→408, row12=384→344, row11=352→312, row9=288→248, row7=224→184
+    {x:180, y:312,type:'pretzel'},{x:250, y:408,type:'pretzel'},{x:320, y:344,type:'pretzel'},
+    {x:420, y:312,type:'pretzel'},{x:550, y:344,type:'pretzel'},{x:650, y:312,type:'pretzel'},
+    {x:700, y:312,type:'pretzel'},{x:900, y:344,type:'pretzel'},{x:1000,y:248,type:'pretzel'},
+    {x:1100,y:248,type:'mug'},   {x:1300,y:184,type:'pretzel'},{x:1500,y:312,type:'pretzel'},
   ];
   if (levelIndex === 1) return [
-    {x:160,y:320,type:'pretzel'},{x:400,y:288,type:'pretzel'},{x:640,y:256,type:'pretzel'},
-    {x:800,y:256,type:'pretzel'},{x:1000,y:224,type:'pretzel'},{x:1200,y:192,type:'pretzel'},
-    {x:360,y:352,type:'mug'},{x:880,y:320,type:'pretzel'},{x:1440,y:160,type:'pretzel'},
-    {x:1600,y:128,type:'pretzel'},{x:1760,y:96,type:'mug'},{x:1920,y:224,type:'pretzel'},
+    // ground row14=448→408, row12=384→344, row11=352→312, row10=320→280, row9=288→248, row8=256→216, row7=224→184
+    {x:160, y:312,type:'pretzel'},{x:360, y:344,type:'mug'},   {x:400, y:344,type:'pretzel'},
+    {x:640, y:248,type:'pretzel'},{x:800, y:344,type:'pretzel'},{x:880, y:344,type:'pretzel'},
+    {x:1000,y:312,type:'pretzel'},{x:1200,y:280,type:'pretzel'},{x:1440,y:248,type:'pretzel'},
+    {x:1600,y:344,type:'pretzel'},{x:1760,y:216,type:'mug'},   {x:1920,y:184,type:'pretzel'},
   ];
   // Level 3
+  // row12=384→344, row11=352→312, row10=320→280, row9=288→248, row8=256→216, row7=224→184, row6=192→152, row5=160→120, row4=128→88
   return [
-    {x:128,y:320,type:'pretzel'},{x:480,y:288,type:'pretzel'},{x:768,y:256,type:'pretzel'},
-    {x:960,y:224,type:'mug'},{x:1152,y:192,type:'pretzel'},{x:1344,y:160,type:'pretzel'},
-    {x:1536,y:128,type:'pretzel'},{x:1728,y:96,type:'mug'},{x:1920,y:64,type:'pretzel'},
-    {x:320,y:352,type:'pretzel'},{x:640,y:320,type:'pretzel'},{x:2080,y:192,type:'pretzel'},
+    {x:128, y:344,type:'pretzel'},{x:320, y:312,type:'pretzel'},{x:480, y:312,type:'pretzel'},
+    {x:640, y:280,type:'pretzel'},{x:768, y:280,type:'pretzel'},{x:960, y:248,type:'mug'},
+    {x:1152,y:216,type:'pretzel'},{x:1344,y:184,type:'pretzel'},{x:1536,y:152,type:'pretzel'},
+    {x:1728,y:120,type:'mug'},   {x:1920,y:88, type:'pretzel'},{x:2080,y:88, type:'pretzel'},
   ];
 }
 
