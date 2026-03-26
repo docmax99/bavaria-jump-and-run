@@ -535,7 +535,7 @@ const Renderer = (() => {
   }
 
   // ── Overlay screens ───────────────────────────────────────────────────
-  function drawMenu(ctx, w, h) {
+  function drawMenu(ctx, w, h, highscore) {
     // Dark vignette overlay
     const vgrd = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w * 0.8);
     vgrd.addColorStop(0,   'rgba(10,4,0,0.55)');
@@ -639,13 +639,19 @@ const Renderer = (() => {
     ctx.shadowBlur = 0;
     ctx.restore();
 
+    if (highscore > 0) {
+      ctx.fillStyle = 'rgba(255,224,122,0.75)';
+      ctx.font = '13px "Cinzel", Georgia, serif';
+      ctx.fillText('🏆  Rekord: ' + highscore, w / 2, h * 0.91);
+    }
+
     ctx.fillStyle = 'rgba(200,146,42,0.5)';
     ctx.font = '12px "Crimson Text", Georgia, serif';
-    ctx.fillText('Enter oder Klick zum Starten', w / 2, h * 0.94);
+    ctx.fillText('Enter oder Klick zum Starten', w / 2, h * 0.97);
     ctx.textAlign = 'left';
   }
 
-  function drawLevelComplete(ctx, w, h, levelName, score, nextLevel) {
+  function drawLevelComplete(ctx, w, h, levelName, score, nextLevel, highscore, isNewHighscore) {
     const vgrd = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w * 0.75);
     vgrd.addColorStop(0, 'rgba(40,20,0,0.6)');
     vgrd.addColorStop(1, 'rgba(0,0,0,0.9)');
@@ -717,15 +723,25 @@ const Renderer = (() => {
       tg2.addColorStop(0, '#FFE07A'); tg2.addColorStop(1, '#C8922A');
       ctx.fillStyle = tg2;
       ctx.fillText('🏆  DU HAST GEWONNEN!', w/2, h * 0.72);
+
+      if (isNewHighscore) {
+        ctx.font = '700 15px "Cinzel", Georgia, serif';
+        ctx.fillStyle = '#FFE07A';
+        ctx.fillText('★  NEUER REKORD: ' + highscore + '  ★', w/2, h * 0.80);
+      } else if (highscore > 0) {
+        ctx.font = '13px "Cinzel", Georgia, serif';
+        ctx.fillStyle = 'rgba(255,224,122,0.65)';
+        ctx.fillText('Rekord: ' + highscore, w/2, h * 0.80);
+      }
     }
 
     ctx.fillStyle = 'rgba(200,146,42,0.5)';
     ctx.font = '13px "Crimson Text", Georgia, serif';
-    ctx.fillText('Enter oder Klick zum Fortfahren', w/2, h * 0.88);
+    ctx.fillText('Enter oder Klick zum Fortfahren', w/2, h * 0.90);
     ctx.textAlign = 'left';
   }
 
-  function drawGameOver(ctx, w, h, score) {
+  function drawGameOver(ctx, w, h, score, highscore, isNewHighscore) {
     const vgrd = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w * 0.8);
     vgrd.addColorStop(0, 'rgba(60,0,0,0.65)');
     vgrd.addColorStop(1, 'rgba(0,0,0,0.95)');
@@ -766,8 +782,9 @@ const Renderer = (() => {
 
     ctx.fillStyle = rGrd; ctx.fillRect(0, h*0.41, w, 1.5);
 
-    // Score panel
-    const bx = w/2 - 150, by = h*0.45, bw2 = 300, bh2 = 76;
+    // Score & highscore panel
+    const panelH = highscore > 0 ? 114 : 76;
+    const bx = w/2 - 150, by = h*0.45, bw2 = 300, bh2 = panelH;
     const bGrd = ctx.createLinearGradient(bx, by, bx, by+bh2);
     bGrd.addColorStop(0, 'rgba(60,8,8,0.8)'); bGrd.addColorStop(1, 'rgba(10,2,2,0.85)');
     ctx.fillStyle = bGrd;
@@ -783,13 +800,24 @@ const Renderer = (() => {
     ctx.fillStyle = '#FF8888';
     ctx.fillText(score.toString(), w/2, by + 62);
 
+    if (highscore > 0) {
+      ctx.font = '11px "Cinzel", Georgia, serif';
+      ctx.fillStyle = isNewHighscore ? '#FFE07A' : 'rgba(255,180,180,0.65)';
+      const recLabel = isNewHighscore ? '★  NEUER REKORD  ★' : 'Rekord';
+      ctx.fillText(recLabel, w/2, by + 84);
+      ctx.font = isNewHighscore ? '700 18px "Cinzel Decorative", Georgia, serif' : '16px "Cinzel", Georgia, serif';
+      ctx.fillStyle = isNewHighscore ? '#FFE07A' : 'rgba(255,180,180,0.65)';
+      ctx.fillText(highscore.toString(), w/2, by + 108);
+    }
+
+    const nextY = by + bh2 + 28;
     ctx.font = '700 16px "Cinzel", Georgia, serif';
     ctx.fillStyle = '#FFE07A';
-    ctx.fillText('Nochmal versuchen?', w/2, h * 0.72);
+    ctx.fillText('Nochmal versuchen?', w/2, nextY);
 
     ctx.fillStyle = 'rgba(180,80,80,0.6)';
     ctx.font = '13px "Crimson Text", Georgia, serif';
-    ctx.fillText('Enter oder Klick zum Fortfahren', w/2, h * 0.84);
+    ctx.fillText('Enter oder Klick zum Fortfahren', w/2, nextY + 36);
     ctx.textAlign = 'left';
   }
 
