@@ -12,9 +12,11 @@ const Player = (() => {
       vx: 0, vy: 0,
       onGround: false,
       onIce: false,
+      onWall: 0,        // 1=right wall, -1=left wall, 0=none
       facing: 1,        // 1=right, -1=left
       coyoteFrames: 0,
       jumpBuffer: 0,
+      jumpsLeft: 2,     // double jump counter
       wasJumping: false,
       frame: 0,         // animation frame counter
       animTimer: 0,
@@ -53,14 +55,39 @@ const Player = (() => {
     if (player.jumpBuffer > 0) player.jumpBuffer--;
 
     // Coyote time
-    if (player.onGround) player.coyoteFrames = COYOTE_TIME;
-    else if (player.coyoteFrames > 0) player.coyoteFrames--;
+    if (player.onGround) {
+      player.coyoteFrames = COYOTE_TIME;
+      player.jumpsLeft = 2;
+    } else if (player.coyoteFrames > 0) {
+      player.coyoteFrames--;
+    }
 
-    // Execute jump
+    // Wall jump — kick away from wall before normal jump logic
+    if (player.jumpBuffer > 0 && player.onWall !== 0 && !player.onGround) {
+      player.vy = JUMP_FORCE;
+      player.vx = -player.onWall * 5;
+      player.facing = -player.onWall;
+      player.jumpsLeft = 1;
+      player.jumpBuffer = 0;
+      player.wasJumping = true;
+      Audio.sfxJump();
+    }
+
+    // Execute normal jump (ground or coyote)
     if (player.jumpBuffer > 0 && player.coyoteFrames > 0) {
       player.vy = JUMP_FORCE;
       player.coyoteFrames = 0;
       player.jumpBuffer = 0;
+      player.jumpsLeft--;
+      player.wasJumping = true;
+      Audio.sfxJump();
+    }
+
+    // Double jump — in air with jumps remaining
+    if (player.jumpBuffer > 0 && player.coyoteFrames === 0 && !player.onGround && player.jumpsLeft > 0) {
+      player.vy = JUMP_FORCE * 0.85;
+      player.jumpBuffer = 0;
+      player.jumpsLeft--;
       player.wasJumping = true;
       Audio.sfxJump();
     }
@@ -72,6 +99,8 @@ const Player = (() => {
 
     // ── Gravity ───────────────────────────────────────────────────────────
     player.vy += gravity;
+    // Wall slide — slow fall when hugging a wall
+    if (player.onWall !== 0 && !player.onGround && player.vy > 3) player.vy = 3;
     if (player.vy > 18) player.vy = 18; // terminal velocity
 
     // ── Move X then collide ───────────────────────────────────────────────
@@ -86,6 +115,9 @@ const Player = (() => {
 
     // Moving platforms
     resolveMovingPlatforms(player, level);
+
+    // Detect wall contact
+    detectWall(player, map);
 
     // ── World bounds ──────────────────────────────────────────────────────
     if (player.x < 0) { player.x = 0; player.vx = 0; }
@@ -182,6 +214,22 @@ const Player = (() => {
         }
       }
     }
+  }
+
+  function detectWall(p, map) {
+    if (p.onGround) { p.onWall = 0; return; }
+    const top = p.y + 4;
+    const bot = p.y + p.h - 1;
+    const rows = [top, (top + bot) / 2, bot];
+    // Check right wall
+    for (const py of rows) {
+      if (Level.isSolid(tileAt(map, p.x + p.w, py))) { p.onWall = 1; return; }
+    }
+    // Check left wall
+    for (const py of rows) {
+      if (Level.isSolid(tileAt(map, p.x - 1, py))) { p.onWall = -1; return; }
+    }
+    p.onWall = 0;
   }
 
   function resolveMovingPlatforms(p, level) {
