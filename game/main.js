@@ -30,14 +30,16 @@ const Game = (() => {
   window.addEventListener('resize', resize);
 
   // ── State ─────────────────────────────────────────────────────────────
-  let state          = STATE.MENU;
-  let levelIndex     = 0;
-  let lives          = 3;
-  let score          = 0;
-  let highscore      = parseInt(localStorage.getItem('bavaria_highscore') || '0');
-  let isNewHighscore = false;
-  let selectedSkin   = parseInt(localStorage.getItem('bavaria_skin') || '0');
-  let skinCooldown   = 0;
+  let state            = STATE.MENU;
+  let levelIndex       = 0;
+  let lives            = 3;
+  let score            = 0;
+  let highscore        = parseInt(localStorage.getItem('bavaria_highscore') || '0');
+  let isNewHighscore   = false;
+  let selectedSkin     = parseInt(localStorage.getItem('bavaria_skin') || '0');
+  let skinCooldown     = 0;
+  let leaderboardData  = [];
+  let nameInputVisible = false;
 
   function checkHighscore() {
     if (score > highscore) {
@@ -114,6 +116,44 @@ const Game = (() => {
     updateHUD();
   }
 
+  // ── Leaderboard / Name input ───────────────────────────────────────────
+  function showNameInput() {
+    if (score <= 0) { goToMenu(); return; }
+    nameInputVisible = true;
+    const overlay = document.getElementById('name-overlay');
+    const input   = document.getElementById('name-input');
+    document.getElementById('name-score-display').textContent = 'Punkte: ' + score;
+    overlay.style.display = 'flex';
+    input.value = '';
+    setTimeout(() => input.focus(), 80);
+  }
+
+  function hideNameInput() {
+    nameInputVisible = false;
+    document.getElementById('name-overlay').style.display = 'none';
+  }
+
+  async function submitName(skip) {
+    const raw  = document.getElementById('name-input').value;
+    const name = skip ? 'Anonym' : (raw.trim() || 'Anonym');
+    hideNameInput();
+    if (!skip) await Leaderboard.submit(name, score, selectedSkin);
+    await goToMenu();
+  }
+
+  async function goToMenu() {
+    Audio.stopMusic();
+    setState(STATE.MENU);
+    leaderboardData = await Leaderboard.fetchTop10();
+  }
+
+  // Wire up overlay buttons
+  document.getElementById('name-submit').addEventListener('click', () => submitName(false));
+  document.getElementById('name-skip').addEventListener('click',   () => submitName(true));
+  document.getElementById('name-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); submitName(false); }
+  });
+
   function nextLevel() {
     if (levelIndex < LEVELS.length - 1) {
       levelIndex++;
@@ -158,11 +198,12 @@ const Game = (() => {
     }
 
     if (state === STATE.LEVEL_COMPLETE || state === STATE.GAME_OVER || state === STATE.GAME_COMPLETE) {
+      if (nameInputVisible) return;
       if ((Input.enter() || clickedThisFrame) && stateTimer > 40) {
         clickedThisFrame = false;
         Input.clearEnter();
         if (state === STATE.LEVEL_COMPLETE) nextLevel();
-        else { Audio.stopMusic(); setState(STATE.MENU); }
+        else showNameInput();
       }
       return;
     }
@@ -338,7 +379,7 @@ const Game = (() => {
       ctx.fillStyle = '#87CEEB';
       ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
       Renderer.drawBackground(ctx, 'village', 0, CANVAS_W, CANVAS_H);
-      Renderer.drawMenu(ctx, CANVAS_W, CANVAS_H, highscore, selectedSkin);
+      Renderer.drawMenu(ctx, CANVAS_W, CANVAS_H, highscore, selectedSkin, leaderboardData);
       return;
     }
 
@@ -407,4 +448,7 @@ const Game = (() => {
   }
 
   requestAnimationFrame(loop);
+
+  // Fetch leaderboard for the initial menu view
+  Leaderboard.fetchTop10().then(data => { leaderboardData = data; });
 })();

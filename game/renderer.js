@@ -42,7 +42,7 @@ const Renderer = (() => {
   const SKINS = [
     { name: 'Hans',    hat: '#2E5A2E', hatBand: '#CC5500', lederhosen: '#8B6914', bib: '#A0780A', shirt: '#E8E8D8', hair: '#5C3A1E', shoes: '#3B2800' },
     { name: 'Liesl',   hat: '#AA2020', hatBand: '#FFB0B0', lederhosen: '#C05070', bib: '#D06080', shirt: '#FFFFFF', hair: '#C8A000', shoes: '#4A2010' },
-    { name: 'König',   hat: '#1A3A8A', hatBand: '#FFD700', lederhosen: '#1A3A8A', bib: '#2A4AAA', shirt: '#FFD700', hair: '#111111', shoes: '#111111' },
+    { name: 'Söder König', hat: '#1A3A8A', hatBand: '#FFD700', lederhosen: '#1A3A8A', bib: '#2A4AAA', shirt: '#FFD700', hair: '#111111', shoes: '#111111', weisswurst: true },
     { name: 'Forst',   hat: '#1A1A1A', hatBand: '#446644', lederhosen: '#2A4A2A', bib: '#3A5A3A', shirt: '#CCCCCC', hair: '#222222', shoes: '#111111' },
   ];
 
@@ -68,6 +68,23 @@ const Renderer = (() => {
     ctx.fillStyle = skin.shirt;
     ctx.fillRect(-10, -22, 4, 9);
     ctx.fillRect(6,   -22, 4, 9);
+    // Weißwurst sword mini (Söder König only)
+    if (skin.weisswurst) {
+      ctx.save();
+      ctx.translate(11, -17);
+      ctx.rotate(-0.3);
+      ctx.fillStyle = '#F5F0E0';
+      ctx.beginPath(); ctx.roundRect(-2, -18, 4, 18, 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(180,160,120,0.5)';
+      ctx.lineWidth = 0.7;
+      for (let i = -14; i < 0; i += 4) {
+        ctx.beginPath(); ctx.arc(0, i, 2, 0.3, Math.PI - 0.3); ctx.stroke();
+      }
+      ctx.fillStyle = '#E0D8C0';
+      ctx.beginPath(); ctx.ellipse(0, -18, 2, 1.5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(0, 0, 2, 1.5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
     // Head
     ctx.fillStyle = '#F4C2A0';
     ctx.beginPath(); ctx.arc(0, -29, 7, 0, Math.PI * 2); ctx.fill();
@@ -635,6 +652,31 @@ const Renderer = (() => {
     ctx.fillRect(-13, -28, 7, 10);
     ctx.fillRect(6,   -28, 7, 10);
 
+    // Weißwurst sword (Söder König only)
+    if (skin.weisswurst) {
+      ctx.save();
+      ctx.translate(14, -22);
+      ctx.rotate(-0.3);
+      // Wurst body (white sausage — off-white)
+      ctx.fillStyle = '#F5F0E0';
+      ctx.beginPath();
+      ctx.roundRect(-3, -28, 6, 28, 3);
+      ctx.fill();
+      // Wurst skin texture lines
+      ctx.strokeStyle = 'rgba(180,160,120,0.5)';
+      ctx.lineWidth = 1;
+      for (let i = -22; i < 0; i += 6) {
+        ctx.beginPath();
+        ctx.arc(0, i, 3, 0.3, Math.PI - 0.3);
+        ctx.stroke();
+      }
+      // Wurst end nubs
+      ctx.fillStyle = '#E0D8C0';
+      ctx.beginPath(); ctx.ellipse(0, -28, 3, 2, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(0, 0, 3, 2, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+
     // Head
     ctx.fillStyle = '#F4C2A0';
     ctx.beginPath();
@@ -732,7 +774,7 @@ const Renderer = (() => {
   }
 
   // ── Overlay screens ───────────────────────────────────────────────────
-  function drawMenu(ctx, w, h, highscore, selectedSkin) {
+  function drawMenu(ctx, w, h, highscore, selectedSkin, leaderboard) {
     // Dark vignette overlay
     const vgrd = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w * 0.8);
     vgrd.addColorStop(0,   'rgba(10,4,0,0.55)');
@@ -802,53 +844,81 @@ const Renderer = (() => {
       ctx.beginPath(); ctx.roundRect(px+1, py+1, pw-2, ph-2, 5); ctx.stroke();
     }
 
-    // ── Left panel: Controls ─────────────────────────────────────────────
+    // ── Left panel: Bestenliste or Controls ──────────────────────────────
     const lx = colPad, lw = colW;
     drawPanel(lx, colY, lw, colH);
 
     ctx.textAlign = 'center';
-    ctx.font = '700 12px "Cinzel", Georgia, serif';
-    ctx.fillStyle = '#FFE07A';
-    ctx.fillText('STEUERUNG', lx + lw/2, colY + 22);
 
-    ctx.font = '13px "Crimson Text", Georgia, serif';
-    ctx.fillStyle = 'rgba(255,224,122,0.85)';
-    const ctrlLines = [
-      '← → / A D',
-      'Bewegen',
-      'Leertaste / ↑',
-      'Springen',
-      '🥨 Brezel = 10 Pkt',
-      '🍺 Maßkrug = Leben',
-      'Auf Gegner springen',
-      '= besiegen!',
-      'Doppelsprung möglich',
-      'ESC = Menü',
-    ];
-    // Draw as two sub-columns inside left panel
-    const subLines = [
-      ['← → / A D',       'Bewegen'],
-      ['Leertaste / ↑',   'Springen'],
-      ['🥨 Brezel',        '= 10 Pkt'],
-      ['🍺 Maßkrug',       '= Leben'],
-      ['Gegner springen',  '= besiegen'],
-    ];
-    ctx.font = '12px "Crimson Text", Georgia, serif';
-    ctx.fillStyle = 'rgba(255,224,122,0.85)';
-    subLines.forEach(([left, right], i) => {
-      const lineY = colY + 44 + i * 22;
-      ctx.textAlign = 'right';
-      ctx.fillText(left,  lx + lw/2 - 6,  lineY);
-      ctx.fillStyle = 'rgba(200,146,42,0.6)';
-      ctx.fillText('—',   lx + lw/2,       lineY);
-      ctx.fillStyle = 'rgba(255,224,122,0.85)';
+    if (leaderboard && leaderboard.length > 0) {
+      // ── Leaderboard ────────────────────────────────────────────────────
+      ctx.font = '700 12px "Cinzel", Georgia, serif';
+      ctx.fillStyle = '#FFE07A';
+      ctx.fillText('🏆  BESTENLISTE', lx + lw/2, colY + 22);
+
+      const medals    = ['🥇', '🥈', '🥉'];
+      const rowCount  = Math.min(leaderboard.length, 8);
+      const rowH      = (colH - 44) / rowCount;
+
+      leaderboard.slice(0, rowCount).forEach((entry, i) => {
+        const ey = colY + 38 + i * rowH + rowH * 0.62;
+        const isTop3 = i < 3;
+
+        // Row highlight for top 3
+        if (isTop3) {
+          const alpha = 0.06 - i * 0.015;
+          ctx.fillStyle = `rgba(255,215,0,${alpha})`;
+          ctx.fillRect(lx + 6, colY + 36 + i * rowH, lw - 12, rowH);
+        }
+
+        // Rank / medal
+        ctx.textAlign = 'left';
+        ctx.font = isTop3 ? '13px serif' : '10px "Cinzel",Georgia,serif';
+        ctx.fillStyle = i === 0 ? '#FFD700' : i === 1 ? '#C8C8C8' : i === 2 ? '#CD7F32' : 'rgba(255,200,80,0.45)';
+        ctx.fillText(medals[i] || (i + 1) + '.', lx + 12, ey);
+
+        // Name
+        ctx.font = isTop3 ? '700 11px "Cinzel",Georgia,serif' : '11px "Cinzel",Georgia,serif';
+        ctx.fillStyle = isTop3 ? '#FFE07A' : 'rgba(255,224,122,0.7)';
+        ctx.fillText(String(entry.name).slice(0, 13), lx + 38, ey);
+
+        // Score
+        ctx.textAlign = 'right';
+        ctx.font = isTop3 ? '700 11px "Cinzel",Georgia,serif' : '11px "Cinzel",Georgia,serif';
+        ctx.fillStyle = isTop3 ? '#FFD700' : 'rgba(255,200,80,0.55)';
+        ctx.fillText(entry.score, lx + lw - 10, ey);
+      });
       ctx.textAlign = 'left';
-      ctx.fillText(right, lx + lw/2 + 6,  lineY);
-    });
-    ctx.textAlign = 'center';
-    ctx.font = '11px "Crimson Text", Georgia, serif';
-    ctx.fillStyle = 'rgba(200,146,42,0.55)';
-    ctx.fillText('Doppelsprung & Wandsprung', lx + lw/2, colY + colH - 12);
+    } else {
+      // ── Controls fallback ──────────────────────────────────────────────
+      ctx.font = '700 12px "Cinzel", Georgia, serif';
+      ctx.fillStyle = '#FFE07A';
+      ctx.fillText('STEUERUNG', lx + lw/2, colY + 22);
+
+      const subLines = [
+        ['← → / A D',       'Bewegen'],
+        ['Leertaste / ↑',   'Springen'],
+        ['🥨 Brezel',        '= 10 Pkt'],
+        ['🍺 Maßkrug',       '= Leben'],
+        ['Gegner springen',  '= besiegen'],
+      ];
+      ctx.font = '12px "Crimson Text", Georgia, serif';
+      subLines.forEach(([left, right], i) => {
+        const lineY = colY + 44 + i * 22;
+        ctx.textAlign = 'right';
+        ctx.fillStyle = 'rgba(255,224,122,0.85)';
+        ctx.fillText(left,  lx + lw/2 - 6,  lineY);
+        ctx.fillStyle = 'rgba(200,146,42,0.6)';
+        ctx.fillText('—',   lx + lw/2,       lineY);
+        ctx.fillStyle = 'rgba(255,224,122,0.85)';
+        ctx.textAlign = 'left';
+        ctx.fillText(right, lx + lw/2 + 6,  lineY);
+      });
+      ctx.textAlign = 'center';
+      ctx.font = '11px "Crimson Text", Georgia, serif';
+      ctx.fillStyle = 'rgba(200,146,42,0.55)';
+      ctx.fillText('Doppelsprung & Wandsprung', lx + lw/2, colY + colH - 12);
+    }
 
     // ── Right panel: Skin selector ───────────────────────────────────────
     const rx = w/2 + 10, rw = colW;
