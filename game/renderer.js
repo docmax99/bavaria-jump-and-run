@@ -239,14 +239,139 @@ const Renderer = (() => {
     const startRow = Math.max(0, Math.floor(camY / TS));
     const endRow   = Math.min(map.length - 1, Math.ceil((camY + canvasH) / TS));
 
+    // Collect visible tiles grouped by type (interleaved x,y pairs)
+    const byType = {};
     for (let r = startRow; r <= endRow; r++) {
       for (let c = startCol; c <= endCol; c++) {
         const tile = map[r][c];
         if (tile === 0) continue;
-        const sx = c * TS - camX;
-        const sy = r * TS - camY;
-        drawTile(ctx, tile, sx, sy, colors, theme);
+        if (!byType[tile]) byType[tile] = [];
+        byType[tile].push(c * TS - camX, r * TS - camY);
       }
+    }
+
+    // Pass 1: base fill per type (1 fillStyle change per type instead of per tile)
+    for (const type of Object.keys(byType)) {
+      ctx.fillStyle = colors[+type] || '#888';
+      ctx.beginPath();
+      const pos = byType[type];
+      for (let i = 0; i < pos.length; i += 2) ctx.rect(pos[i], pos[i + 1], TS, TS);
+      ctx.fill();
+    }
+
+    // Pass 2: shared bevel highlights (batched for ALL tiles at once)
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    ctx.beginPath();
+    for (const pos of Object.values(byType)) {
+      for (let i = 0; i < pos.length; i += 2) {
+        ctx.rect(pos[i], pos[i + 1], TS, 2);
+        ctx.rect(pos[i], pos[i + 1], 2, TS);
+      }
+    }
+    ctx.fill();
+
+    // Pass 3: shared bevel shadows
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.beginPath();
+    for (const pos of Object.values(byType)) {
+      for (let i = 0; i < pos.length; i += 2) {
+        ctx.rect(pos[i], pos[i + 1] + TS - 2, TS, 2);
+        ctx.rect(pos[i + 0] + TS - 2, pos[i + 1], 2, TS);
+      }
+    }
+    ctx.fill();
+
+    // Pass 4: type-specific details (batched per type)
+    // Grass (1)
+    if (byType[1]) {
+      const pos = byType[1];
+      ctx.fillStyle = '#33BB33';
+      ctx.beginPath();
+      for (let i = 0; i < pos.length; i += 2) ctx.rect(pos[i], pos[i + 1], TS, 6);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(0,0,0,0.15)';
+      ctx.beginPath();
+      for (let i = 0; i < pos.length; i += 2) ctx.rect(pos[i], pos[i + 1] + 6, TS, 2);
+      ctx.fill();
+    }
+    // Stone (2)
+    if (byType[2]) {
+      const pos = byType[2];
+      ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let i = 0; i < pos.length; i += 2) {
+        const x = pos[i], y = pos[i + 1];
+        ctx.rect(x + 0.5, y + 0.5, TS - 1, TS - 1);
+        ctx.moveTo(x + TS / 2, y + 0.5);  ctx.lineTo(x + TS / 2, y + TS / 2 - 1);
+        ctx.moveTo(x + 0.5,    y + TS / 2); ctx.lineTo(x + TS / 2 - 1, y + TS / 2);
+      }
+      ctx.stroke();
+    }
+    // Wood (3)
+    if (byType[3]) {
+      const pos = byType[3];
+      ctx.fillStyle = '#A07040';
+      ctx.beginPath();
+      for (let i = 0; i < pos.length; i += 2) ctx.rect(pos[i], pos[i + 1], TS, 10);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.2)';
+      ctx.beginPath();
+      for (let i = 0; i < pos.length; i += 2) ctx.rect(pos[i] + 4, pos[i + 1] + 2, TS - 8, 3);
+      ctx.fill();
+      ctx.fillStyle = '#7A5530';
+      ctx.beginPath();
+      for (let i = 0; i < pos.length; i += 2) {
+        for (let j = 0; j < 3; j++) ctx.rect(pos[i] + 6 + j * 10, pos[i + 1] + 1, 2, 8);
+      }
+      ctx.fill();
+    }
+    // Snow (4)
+    if (byType[4]) {
+      const pos = byType[4];
+      ctx.fillStyle = '#FFFFFF';
+      ctx.beginPath();
+      for (let i = 0; i < pos.length; i += 2) ctx.rect(pos[i], pos[i + 1], TS, 8);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(200,230,255,0.5)';
+      ctx.beginPath();
+      for (let i = 0; i < pos.length; i += 2) ctx.rect(pos[i] + 4, pos[i + 1] + 2, TS - 8, 4);
+      ctx.fill();
+    }
+    // Ice (5)
+    if (byType[5]) {
+      const pos = byType[5];
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.beginPath();
+      for (let i = 0; i < pos.length; i += 2) ctx.rect(pos[i], pos[i + 1], TS, TS);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      for (let i = 0; i < pos.length; i += 2) {
+        const x = pos[i], y = pos[i + 1];
+        ctx.moveTo(x + 4, y + 4);       ctx.lineTo(x + TS - 10, y + 10);
+        ctx.moveTo(x + 8, y + TS - 8);  ctx.lineTo(x + TS - 4,  y + TS - 14);
+      }
+      ctx.stroke();
+    }
+    // Castle (6)
+    if (byType[6]) {
+      const pos = byType[6];
+      ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      for (let i = 0; i < pos.length; i += 2) {
+        const x = pos[i], y = pos[i + 1];
+        ctx.rect(x + 0.5, y + 0.5, TS - 1, TS - 1);
+        ctx.moveTo(x + TS / 3, y + 0.5);      ctx.lineTo(x + TS / 3,     y + TS / 2 - 1);
+        ctx.moveTo(x + 0.5,    y + TS / 2);   ctx.lineTo(x + 2 * TS / 3, y + TS / 2);
+      }
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.06)';
+      ctx.beginPath();
+      for (let i = 0; i < pos.length; i += 2) ctx.rect(pos[i], pos[i + 1], TS, 2);
+      ctx.fill();
     }
 
     // World boundary wall at right edge
@@ -264,12 +389,12 @@ const Renderer = (() => {
       // Brick lines
       ctx.strokeStyle = 'rgba(0,0,0,0.3)';
       ctx.lineWidth = 1;
+      ctx.beginPath();
       for (let by2 = 0; by2 < wallH; by2 += TS) {
-        ctx.beginPath();
         ctx.moveTo(wallX, by2 - camY);
         ctx.lineTo(wallX + wallW, by2 - camY);
-        ctx.stroke();
       }
+      ctx.stroke();
       // Gold edge highlight
       ctx.fillStyle = 'rgba(200,146,42,0.6)';
       ctx.fillRect(wallX, -camY, 3, wallH);
@@ -283,73 +408,6 @@ const Renderer = (() => {
     });
   }
 
-  function drawTile(ctx, type, x, y, colors, theme) {
-    const c = colors[type] || '#888';
-    ctx.fillStyle = c;
-    ctx.fillRect(x, y, TS, TS);
-    // Bevel — top/left highlight, bottom/right shadow
-    ctx.fillStyle = 'rgba(255,255,255,0.18)';
-    ctx.fillRect(x, y, TS, 2);
-    ctx.fillRect(x, y, 2, TS);
-    ctx.fillStyle = 'rgba(0,0,0,0.2)';
-    ctx.fillRect(x, y + TS - 2, TS, 2);
-    ctx.fillRect(x + TS - 2, y, 2, TS);
-
-    if (type === 1) {
-      // Grass top
-      ctx.fillStyle = '#33BB33';
-      ctx.fillRect(x, y, TS, 6);
-      // Detail lines
-      ctx.fillStyle = 'rgba(0,0,0,0.15)';
-      ctx.fillRect(x, y + 6, TS, 2);
-    } else if (type === 2) {
-      // Stone — brick pattern
-      ctx.strokeStyle = 'rgba(0,0,0,0.25)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(x + 0.5, y + 0.5, TS - 1, TS - 1);
-      ctx.strokeRect(x + TS/2, y + 0.5, 0, TS/2 - 1);
-      ctx.strokeRect(x + 0.5, y + TS/2, TS/2 - 1, 0);
-    } else if (type === 3) {
-      // Wood platform
-      ctx.fillStyle = '#A07040';
-      ctx.fillRect(x, y, TS, 10);
-      ctx.fillStyle = 'rgba(255,255,255,0.2)';
-      ctx.fillRect(x + 4, y + 2, TS - 8, 3);
-      ctx.fillStyle = '#7A5530';
-      for (let i = 0; i < 3; i++) {
-        ctx.fillRect(x + 6 + i * 10, y + 1, 2, 8);
-      }
-    } else if (type === 4) {
-      // Snow
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(x, y, TS, 8);
-      ctx.fillStyle = 'rgba(200,230,255,0.5)';
-      ctx.fillRect(x + 4, y + 2, TS - 8, 4);
-    } else if (type === 5) {
-      // Ice
-      ctx.fillStyle = 'rgba(255,255,255,0.4)';
-      ctx.fillRect(x, y, TS, TS);
-      // Shine lines
-      ctx.strokeStyle = 'rgba(255,255,255,0.7)';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(x + 4, y + 4); ctx.lineTo(x + TS - 10, y + 10);
-      ctx.moveTo(x + 8, y + TS - 8); ctx.lineTo(x + TS - 4, y + TS - 14);
-      ctx.stroke();
-    } else if (type === 6) {
-      // Castle brick — dark stone with mortar lines
-      ctx.strokeStyle = 'rgba(0,0,0,0.45)';
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(x + 0.5, y + 0.5, TS - 1, TS - 1);
-      ctx.beginPath();
-      ctx.moveTo(x + TS / 3, y + 0.5); ctx.lineTo(x + TS / 3, y + TS / 2 - 1);
-      ctx.moveTo(x + 0.5, y + TS / 2); ctx.lineTo(x + 2 * TS / 3, y + TS / 2);
-      ctx.stroke();
-      // Subtle surface highlight
-      ctx.fillStyle = 'rgba(255,255,255,0.06)';
-      ctx.fillRect(x, y, TS, 2);
-    }
-  }
 
   function drawMovingPlatform(ctx, x, y, w) {
     ctx.fillStyle = '#C8A060';
@@ -364,11 +422,12 @@ const Renderer = (() => {
   function drawCollectibles(ctx, level, camX, camY, tick) {
     level.collectibles.forEach(c => {
       if (c.collected) return;
-      const sx = c.x - camX;
-      const sy = c.y - camY + Math.sin(tick * 0.05 + c.x) * 3;
+      const sx       = c.x - camX;
       if (sx < -40 || sx > ctx.canvas.width + 40) return;
+      const sinVal   = Math.sin(tick * 0.05 + c.x);
+      const sy       = c.y - camY + sinVal * 3;
       // Glow pulse
-      const glowR   = 20 + Math.sin(tick * 0.05 + c.x) * 4;
+      const glowR    = 20 + sinVal * 4;
       const glowCol = c.type === 'pretzel'    ? '200,150,50'
                     : c.type === 'mug'         ? '255,200,50'
                     : c.type === 'speedboost'  ? '255,220,0'

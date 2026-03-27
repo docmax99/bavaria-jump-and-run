@@ -29,10 +29,17 @@ const Particles = (() => {
   }
 
   function draw(ctx, camX, camY) {
-    for (const p of pool) {
+    if (pool.length === 0) return;
+    // Sort by color so we can batch fillStyle changes
+    const sorted = pool.slice().sort((a, b) => (a.color > b.color ? 1 : -1));
+    let lastColor = null;
+    for (const p of sorted) {
       const alpha = p.life / p.maxLife;
       ctx.globalAlpha = alpha;
-      ctx.fillStyle   = p.color;
+      if (p.color !== lastColor) {
+        ctx.fillStyle = p.color;
+        lastColor = p.color;
+      }
       ctx.beginPath();
       ctx.arc(p.x - camX, p.y - camY, p.r * (0.3 + alpha * 0.7), 0, Math.PI * 2);
       ctx.fill();
