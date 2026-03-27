@@ -7,6 +7,7 @@ const CANVAS_H = 480;
 const STATE = {
   MENU:           'menu',
   PLAYING:        'playing',
+  PAUSED:         'paused',
   LEVEL_COMPLETE: 'level_complete',
   GAME_OVER:      'game_over',
   GAME_COMPLETE:  'game_complete',
@@ -55,6 +56,35 @@ const Game = (() => {
   let tick       = 0;
   let stateTimer = 0;
 
+  // ── Fade system ───────────────────────────────────────────────────────
+  let fadeAlpha    = 0;
+  let fadingOut    = false;
+  let fadingIn     = false;
+  let fadeCallback = null;
+
+  function startFade(callback) {
+    fadingOut    = true;
+    fadingIn     = false;
+    fadeAlpha    = 0;
+    fadeCallback = callback;
+  }
+
+  // ── Level statistics ──────────────────────────────────────────────────
+  let levelStartTime  = 0;
+  let levelItemsCount = 0;
+  let levelKillCount  = 0;
+  let levelStats      = null; // stored at level complete
+
+  // ── Tutorial hints ────────────────────────────────────────────────────
+  const TUTORIAL_HINTS = [
+    { triggerX: 120,  text: '← → Bewegen',           shown: false },
+    { triggerX: 380,  text: 'Leertaste: Springen',    shown: false },
+    { triggerX: 700,  text: 'Doppelsprung möglich!',  shown: false },
+    { triggerX: 1000, text: 'Auf Gegner springen!',   shown: false },
+    { triggerX: 1400, text: 'Sammle Brezeln!',        shown: false },
+  ];
+  let tutorialHints = TUTORIAL_HINTS.map(h => ({ ...h }));
+
   // ── Juice state ───────────────────────────────────────────────────────
   let shakeFrames    = 0;
   let shakeAmp       = 0;
@@ -80,7 +110,7 @@ const Game = (() => {
     hudLives.textContent = '❤️ ' + lives;
     hudScore.textContent = '🥨 ' + score;
     hudLevel.textContent = level ? level.name : '';
-    hud.style.display = state === STATE.PLAYING ? 'flex' : 'none';
+    hud.style.display = (state === STATE.PLAYING || state === STATE.PAUSED) ? 'flex' : 'none';
   }
 
   // ── Game flow ─────────────────────────────────────────────────────────
@@ -108,6 +138,11 @@ const Game = (() => {
     scorePopups.length = 0;
     shakeFrames = 0;
     hitPauseFrames = 0;
+    tutorialHints = TUTORIAL_HINTS.map(h => ({ ...h }));
+    levelStartTime  = Date.now();
+    levelItemsCount = 0;
+    levelKillCount  = 0;
+    levelStats      = null;
   }
 
   function setState(s) {
@@ -155,16 +190,52 @@ const Game = (() => {
   });
 
   function nextLevel() {
-    if (levelIndex < LEVELS.length - 1) {
-      levelIndex++;
-      loadLevel(levelIndex);
-      setState(STATE.PLAYING);
-    } else {
-      checkHighscore();
-      setState(STATE.GAME_COMPLETE);
-      Audio.stopMusic();
+    startFade(() => {
+      if (levelIndex < LEVELS.length - 1) {
+        levelIndex++;
+        loadLevel(levelIndex);
+        setState(STATE.PLAYING);
+      } else {
+        checkHighscore();
+        setState(STATE.GAME_COMPLETE);
+        Audio.stopMusic();
+      }
+    });
+  }
+
+  // ── Pause ─────────────────────────────────────────────────────────────
+  let pauseKeyWasDown      = false;
+  let fullscreenKeyWasDown = false;
+
+  function showPauseOverlay() {
+    const overlay = document.getElementById('pause-overlay');
+    document.getElementById('music-vol-slider').value = Audio.getMusicVolume();
+    document.getElementById('sfx-vol-slider').value   = Audio.getSfxVolume();
+    overlay.style.display = 'flex';
+    hud.style.display = 'none';
+  }
+
+  function hidePauseOverlay() {
+    document.getElementById('pause-overlay').style.display = 'none';
+  }
+
+  function togglePause() {
+    if (state === STATE.PLAYING) {
+      state = STATE.PAUSED;
+      showPauseOverlay();
+    } else if (state === STATE.PAUSED) {
+      state = STATE.PLAYING;
+      hidePauseOverlay();
+      updateHUD();
     }
   }
+
+  document.getElementById('music-vol-slider').addEventListener('input', e => {
+    Audio.setMusicVolume(parseFloat(e.target.value));
+  });
+  document.getElementById('sfx-vol-slider').addEventListener('input', e => {
+    Audio.setSfxVolume(parseFloat(e.target.value));
+  });
 
   // ── Camera ────────────────────────────────────────────────────────────
   function updateCamera() {
@@ -197,6 +268,42 @@ const Game = (() => {
       return;
     }
 
+    // Fade system update
+    if (fadingOut) {
+      fadeAlpha += 0.06;
+      if (fadeAlpha >= 1) {
+        fadeAlpha = 1;
+        fadingOut = false;
+        fadingIn  = true;
+        if (fadeCallback) { fadeCallback(); fadeCallback = null; }
+      }
+    } else if (fadingIn) {
+      fadeAlpha -= 0.06;
+      if (fadeAlpha <= 0) { fadeAlpha = 0; fadingIn = false; }
+    }
+
+    // F key toggle fullscreen (edge-detect)
+    const fDown = Input.isDown('KeyF');
+    if (fDown && !fullscreenKeyWasDown) {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.getElementById('game-container').requestFullscreen().catch(() => {});
+    }
+    fullscreenKeyWasDown = fDown;
+
+    // P key toggle pause (edge-detect)
+    const pDown = Input.isDown('KeyP');
+    if (pDown && !pauseKeyWasDown) {
+      if (state === STATE.PLAYING || state === STATE.PAUSED) togglePause();
+    }
+    pauseKeyWasDown = pDown;
+
+    // Paused: only handle resume / menu keys
+    if (state === STATE.PAUSED) {
+      if (Input.isDown('Escape')) togglePause();
+      if (Input.isDown('KeyM'))   { hidePauseOverlay(); Audio.stopMusic(); setState(STATE.MENU); }
+      return;
+    }
+
     if (state === STATE.LEVEL_COMPLETE || state === STATE.GAME_OVER || state === STATE.GAME_COMPLETE) {
       if (nameInputVisible) return;
       if ((Input.enter() || clickedThisFrame) && stateTimer > 40) {
@@ -208,10 +315,9 @@ const Game = (() => {
       return;
     }
 
-    // ESC → menu
+    // ESC → pause
     if (Input.isDown('Escape')) {
-      Audio.stopMusic();
-      setState(STATE.MENU);
+      togglePause();
       return;
     }
 
@@ -226,7 +332,8 @@ const Game = (() => {
     }
 
     Level.updateMovingPlatforms(level, 1);
-    Level.updateEnemies(level);
+    Level.updateEnemies(level, player);
+    Level.updateProjectiles(level);
     Player.update(player, level, Input, 1);
 
     // ── Squash & stretch ──────────────────────────────────────────────────
@@ -259,6 +366,26 @@ const Game = (() => {
     playerTrail.forEach(t => { t.a -= 0.055; });
     playerTrail = playerTrail.filter(t => t.a > 0);
 
+    // ── Tutorial hints (Level 1 only) ─────────────────────────────────────
+    if (levelIndex === 0) {
+      tutorialHints.forEach(hint => {
+        if (!hint.shown && player.x >= hint.triggerX) {
+          hint.shown = true;
+          scorePopups.push({ x: player.x, y: player.y - 60, text: hint.text, life: 140, maxLife: 140, isTutorial: true });
+        }
+      });
+    }
+
+    // ── Checkpoints ───────────────────────────────────────────────────────
+    level.checkpoints.forEach(cp => {
+      if (!cp.activated && player.x + player.w >= cp.x) {
+        cp.activated = true;
+        scorePopups.push({ x: cp.x - 16, y: (Level.ROWS - 6) * TILE_SIZE, text: 'Checkpoint!', life: 100, maxLife: 100 });
+        Audio.sfxCoin();
+        Particles.spawn(cp.x, (Level.ROWS - 2) * TILE_SIZE, 14, '#FFD700', 3.5, 28);
+      }
+    });
+
     // ── Collectibles ──────────────────────────────────────────────────────
     const wasCollected = level.collectibles.map(c => c.collected);
     const { points, livesGained, speedBoost, flyBoost } = Player.checkCollectibles(player, level);
@@ -276,6 +403,7 @@ const Game = (() => {
     }
     level.collectibles.forEach((c, i) => {
       if (!wasCollected[i] && c.collected) {
+        levelItemsCount++;
         const col = c.type === 'pretzel'   ? '#FFD700'
                   : c.type === 'mug'        ? '#FF8888'
                   : c.type === 'speedboost' ? '#FFE020'
@@ -294,6 +422,7 @@ const Game = (() => {
     const { hit } = Player.checkEnemies(player, level);
     level.enemies.forEach((e, i) => {
       if (wasAlive[i] && !e.alive) {
+        levelKillCount++;
         const isBoss = !!e.isBoss;
         const pts    = isBoss ? 500 : 50;
         Particles.spawn(e.x, e.y - 14, isBoss ? 30 : 12, isBoss ? '#FFD700' : '#CC2200', isBoss ? 6 : 4, isBoss ? 50 : 28);
@@ -322,6 +451,33 @@ const Game = (() => {
       }
     }
 
+    // ── Boss projectile collision ──────────────────────────────────────
+    if (player.invincible === 0) {
+      for (const proj of level.projectiles) {
+        if (!proj.alive) continue;
+        if (proj.x > player.x && proj.x < player.x + player.w &&
+            proj.y > player.y && proj.y < player.y + player.h) {
+          proj.alive = false;
+          player.invincible = 90;
+          lives--;
+          Audio.sfxHit();
+          player.vx = proj.vx > 0 ? 3 : -3;
+          player.vy = -5;
+          triggerShake(10, 5);
+          hitPauseFrames = 4;
+          Particles.spawn(player.x + player.w / 2, player.y + player.h / 2, 8, '#FF8800', 4, 20);
+          if (lives <= 0) {
+            Audio.sfxGameOver();
+            Audio.stopMusic();
+            checkHighscore();
+            setState(STATE.GAME_OVER);
+            return;
+          }
+          break;
+        }
+      }
+    }
+
     // Player died (fell in pit)
     if (player.dead) {
       lives--;
@@ -332,9 +488,11 @@ const Game = (() => {
         checkHighscore();
         setState(STATE.GAME_OVER);
       } else {
-        player = Player.create(64, (Level.ROWS - 4) * TILE_SIZE);
+        const lastCp = level.checkpoints.filter(cp => cp.activated).pop();
+        const spawnX = lastCp ? lastCp.x - 16 : 64;
+        player = Player.create(spawnX, (Level.ROWS - 4) * TILE_SIZE);
         playerTrail = [];
-        camX = 0;
+        camX = Math.max(0, Math.min(spawnX - CANVAS_W / 2, level.width - CANVAS_W));
       }
       return;
     }
@@ -352,6 +510,11 @@ const Game = (() => {
       }
       score += 100 * (levelIndex + 1);
       Audio.sfxLevelComplete();
+      levelStats = {
+        time:  Math.floor((Date.now() - levelStartTime) / 1000),
+        items: levelItemsCount,
+        kills: levelKillCount,
+      };
       setState(STATE.LEVEL_COMPLETE);
       return;
     }
@@ -393,9 +556,11 @@ const Game = (() => {
     // Game scene
     Renderer.drawBackground(ctx, level.theme, dcamX, CANVAS_W, CANVAS_H);
     Renderer.drawTilemap(ctx, level, dcamX, dcamY, CANVAS_W, CANVAS_H);
+    Renderer.drawCheckpoints(ctx, level, dcamX, dcamY, tick);
     Renderer.drawGoal(ctx, level, dcamX, dcamY, tick);
     Renderer.drawCollectibles(ctx, level, dcamX, dcamY, tick);
     Renderer.drawEnemies(ctx, level, dcamX, dcamY, tick);
+    Renderer.drawProjectiles(ctx, level, dcamX, dcamY);
     Renderer.drawPlayerTrail(ctx, playerTrail, dcamX, dcamY);
     Renderer.drawPlayer(ctx, player, dcamX, dcamY, tick, selectedSkin);
     Particles.draw(ctx, dcamX, dcamY);
@@ -416,11 +581,17 @@ const Game = (() => {
 
     if (state === STATE.LEVEL_COMPLETE) {
       const nextName = levelIndex + 1 < LEVELS.length ? LEVELS[levelIndex + 1].name : null;
-      Renderer.drawLevelComplete(ctx, CANVAS_W, CANVAS_H, level.name, score, nextName, highscore, isNewHighscore);
+      Renderer.drawLevelComplete(ctx, CANVAS_W, CANVAS_H, level.name, score, nextName, highscore, isNewHighscore, levelStats);
     } else if (state === STATE.GAME_OVER) {
       Renderer.drawGameOver(ctx, CANVAS_W, CANVAS_H, score, highscore, isNewHighscore);
     } else if (state === STATE.GAME_COMPLETE) {
       Renderer.drawGameComplete(ctx, CANVAS_W, CANVAS_H, score, highscore, isNewHighscore);
+    }
+
+    // Fade overlay (level transitions)
+    if (fadeAlpha > 0) {
+      ctx.fillStyle = `rgba(0,0,0,${fadeAlpha})`;
+      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
     }
   }
 

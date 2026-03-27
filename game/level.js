@@ -336,12 +336,12 @@ function makeEnemies(levelIndex) {
   if (levelIndex === 1) return [
     {x:350, y:14*32, vx:-1,   minX:288,  maxX:480,  alive:true},
     {x:768, y:14*32, vx:-1.2, minX:704,  maxX:1152, alive:true},
-    {x:1100,y:11*32, vx:-1,   minX:1024, maxX:1200, alive:true},
-    {x:1500,y:9*32,  vx:-1.5, minX:1440, maxX:1600, alive:true},
-    {x:1900,y:7*32,  vx:-1.5, minX:1840, maxX:2000, alive:true},
+    {x:1040,y:11*32, vx:-1,   minX:976,  maxX:1104, alive:true},  // platform [11,30,34]: x=960-1120
+    {x:1520,y:9*32,  vx:-1.5, minX:1456, maxX:1584, alive:true},  // platform [9,45,49]: x=1440-1600
+    {x:1968,y:7*32,  vx:-1.5, minX:1904, maxX:2032, alive:true},  // platform [7,59,63]: x=1888-2048
     // Extended section
-    {x:2176,y:6*32,  vx:-1.8, minX:2112, maxX:2272, alive:true},
-    {x:2528,y:5*32,  vx:-1.8, minX:2464, maxX:2624, alive:true},
+    {x:2192,y:6*32,  vx:-1.8, minX:2128, maxX:2256, alive:true},  // platform [6,66,70]: x=2112-2272
+    {x:2864,y:5*32,  vx:-1.8, minX:2800, maxX:2928, alive:true},  // platform [5,87,91]: x=2784-2944
   ];
   if (levelIndex === 2) return [
     {x:300, y:14*32, vx:-1.2, minX:240,  maxX:400,  alive:true},
@@ -356,24 +356,39 @@ function makeEnemies(levelIndex) {
   if (levelIndex === 3) return [
     {x:480, y:14*32, vx:-1,   minX:384,  maxX:576,  alive:true},
     {x:960, y:12*32, vx:-1.2, minX:896,  maxX:1056, alive:true},
+    // Turtle — 2 HP, slow
+    {x:1200,y:14*32, vx:-0.7, minX:1120, maxX:1360, alive:true, type:'turtle', hp:2, retreated:false, retreatTimer:0},
     {x:1440,y:9*32,  vx:-1.2, minX:1376, maxX:1536, alive:true},
+    // Bat — sine flight
+    {x:1800,y:7*32,  vx:-1.4, minX:1700, maxX:1980, alive:true, type:'bat', baseY:7*32, phase:0},
     {x:1920,y:12*32, vx:-1.5, minX:1856, maxX:2048, alive:true},
     {x:2400,y:14*32, vx:-1.5, minX:2304, maxX:2496, alive:true},
     {x:2752,y:11*32, vx:-1.8, minX:2688, maxX:2848, alive:true},
   ];
   if (levelIndex === 4) return [
     {x:384, y:14*32, vx:-1.2, minX:320,  maxX:512,  alive:true},
+    // Bat — sine flight
+    {x:700, y:8*32,  vx:-1.5, minX:600,  maxX:920,  alive:true, type:'bat', baseY:8*32, phase:1.2},
     {x:768, y:11*32, vx:-1.2, minX:704,  maxX:896,  alive:true},
+    // Turtle — 2 HP
+    {x:1100,y:14*32, vx:-0.8, minX:1000, maxX:1280, alive:true, type:'turtle', hp:2, retreated:false, retreatTimer:0},
     {x:1216,y:9*32,  vx:-1.5, minX:1152, maxX:1344, alive:true},
     {x:1664,y:14*32, vx:-1.5, minX:1600, maxX:1792, alive:true},
-    {x:2112,y:7*32,  vx:-1.8, minX:2048, maxX:2240, alive:true},
+    // Bat
+    {x:2000,y:6*32,  vx:-1.8, minX:1900, maxX:2200, alive:true, type:'bat', baseY:6*32, phase:2.5},
     {x:2560,y:14*32, vx:-2,   minX:2496, maxX:2688, alive:true},
   ];
   if (levelIndex === 5) return [
     {x:320, y:14*32, vx:-1.5, minX:256,  maxX:448,  alive:true},
+    // Bat
+    {x:640, y:7*32,  vx:-1.8, minX:550,  maxX:850,  alive:true, type:'bat', baseY:7*32, phase:0.5},
     {x:704, y:11*32, vx:-1.8, minX:640,  maxX:800,  alive:true},
+    // Turtle — 2 HP
+    {x:960, y:14*32, vx:-0.9, minX:860,  maxX:1120, alive:true, type:'turtle', hp:2, retreated:false, retreatTimer:0},
     {x:1088,y:9*32,  vx:-1.8, minX:1024, maxX:1216, alive:true},
     {x:1472,y:7*32,  vx:-2,   minX:1408, maxX:1600, alive:true},
+    // Bat + Turtle combo
+    {x:1750,y:6*32,  vx:-2,   minX:1650, maxX:1950, alive:true, type:'bat', baseY:6*32, phase:3.0},
     {x:1856,y:14*32, vx:-2,   minX:1792, maxX:1984, alive:true},
     {x:2304,y:5*32,  vx:-2.2, minX:2240, maxX:2400, alive:true},
   ];
@@ -396,6 +411,7 @@ const LEVELS = [
     movingPlatforms: [],
     gravity: 0.5,
     friction: 0.85,
+    checkpoints: [{ x: 1440 }],
   },
   {
     map: LEVEL2_MAP,
@@ -404,6 +420,7 @@ const LEVELS = [
     movingPlatforms: LEVEL2_MOVING,
     gravity: 0.5,
     friction: 0.85,
+    checkpoints: [{ x: 1520 }],
   },
   {
     map: LEVEL3_MAP,
@@ -412,6 +429,7 @@ const LEVELS = [
     movingPlatforms: [],
     gravity: 0.5,
     friction: 0.75,
+    checkpoints: [{ x: 1600 }],
   },
   {
     map: LEVEL4_MAP,
@@ -420,6 +438,7 @@ const LEVELS = [
     movingPlatforms: LEVEL4_MOVING,
     gravity: 0.5,
     friction: 0.85,
+    checkpoints: [{ x: 1504 }],
   },
   {
     map: LEVEL5_MAP,
@@ -428,6 +447,7 @@ const LEVELS = [
     movingPlatforms: LEVEL5_MOVING,
     gravity: 0.5,
     friction: 0.85,
+    checkpoints: [{ x: 1440 }],
   },
   {
     map: LEVEL6_MAP,
@@ -436,6 +456,7 @@ const LEVELS = [
     movingPlatforms: LEVEL6_MOVING,
     gravity: 0.5,
     friction: 0.72,
+    checkpoints: [{ x: 1600 }],
   },
   {
     map: LEVEL7_MAP,
@@ -444,6 +465,7 @@ const LEVELS = [
     movingPlatforms: [],
     gravity: 0.5,
     friction: 0.88,
+    checkpoints: [],
   },
 ];
 
@@ -483,6 +505,8 @@ const Level = {
       movingPlatforms: def.movingPlatforms.map(p => ({ ...p, dir: 1 })),
       collectibles: makeCollectibles(levelIndex).map(c => ({ ...c, collected: false })),
       enemies: makeEnemies(levelIndex),
+      checkpoints: (def.checkpoints || []).map(cp => ({ x: cp.x, activated: false })),
+      projectiles: [],
       goalX: Level.getGoalX(levelIndex),
       width: Level.getWidth(def.map),
       height: Level.getHeight(def.map),
@@ -497,14 +521,19 @@ const Level = {
     });
   },
 
-  updateEnemies(level) {
+  updateEnemies(level, player) {
     const { map, gravity } = level;
     level.enemies.forEach(e => {
       if (!e.alive) return;
 
       // ── Boss update ───────────────────────────────────────────────────
       if (e.isBoss) {
-        const speedMult = e.hp <= 1 ? 1.8 : 1.0;
+        // Phase: 3=easy, 2=medium, 1=hard
+        const phase = e.hp;
+        const speedMult = phase === 1 ? 2.2 : phase === 2 ? 1.5 : 1.0;
+        const throwInterval = phase === 1 ? 70 : phase === 2 ? 90 : 120;
+        const throwCount    = phase === 1 ? 2  : 1;
+
         e.vy = (e.vy || 0) + gravity;
         if (e.vy > 18) e.vy = 18;
 
@@ -530,7 +559,40 @@ const Level = {
           e.vy = -13;
           e.jumpTimer = 0;
         }
+
+        // Throw projectile(s)
+        e.throwTimer = (e.throwTimer || 0) + 1;
+        if (e.throwTimer >= throwInterval) {
+          e.throwTimer = 0;
+          const dir = player && player.x > e.x ? 1 : (e.vx > 0 ? 1 : -1);
+          for (let t = 0; t < throwCount; t++) {
+            level.projectiles.push({
+              x:  e.x + (dir > 0 ? e.W : 0),
+              y:  e.y - e.H * 0.5,
+              vx: dir * (4 + t * 1.5),
+              vy: -7 + t * 2,
+              alive: true,
+            });
+          }
+        }
         return;
+      }
+
+      // ── Bat: sine-wave flight ─────────────────────────────────────────
+      if (e.type === 'bat') {
+        e.phase = (e.phase || 0) + 0.045;
+        e.y     = e.baseY + Math.sin(e.phase) * 38;
+        e.x    += e.vx;
+        if (e.x <= e.minX) { e.x = e.minX; e.vx =  Math.abs(e.vx); }
+        if (e.x >= e.maxX) { e.x = e.maxX; e.vx = -Math.abs(e.vx); }
+        return;
+      }
+
+      // ── Turtle retreat timer ──────────────────────────────────────────
+      if (e.type === 'turtle' && e.retreatTimer > 0) {
+        e.retreatTimer--;
+        if (e.retreatTimer <= 0) e.retreated = false;
+        // Still apply gravity while retreated
       }
 
       // ── Gravity ───────────────────────────────────────────────────────
@@ -573,5 +635,19 @@ const Level = {
         }
       }
     });
+  },
+
+  updateProjectiles(level) {
+    for (let i = level.projectiles.length - 1; i >= 0; i--) {
+      const p = level.projectiles[i];
+      if (!p.alive) { level.projectiles.splice(i, 1); continue; }
+      p.vy += 0.4;
+      if (p.vy > 14) p.vy = 14;
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.y > level.height + 64 || p.x < -200 || p.x > level.width + 200) {
+        level.projectiles.splice(i, 1);
+      }
+    }
   },
 };

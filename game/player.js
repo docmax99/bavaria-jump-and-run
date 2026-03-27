@@ -311,10 +311,23 @@ const Player = (() => {
         // Player falls onto enemy from above?
         const playerBottom = player.y + player.h;
         const enemyTop     = ey;
-        if (player.vy > 0 && playerBottom - player.vy <= enemyTop + 4) {
+        const fromAbove    = player.vy > 0 && playerBottom - player.vy <= enemyTop + 4;
+
+        // Retreated turtle: safe from all sides while in shell
+        if (e.type === 'turtle' && e.retreated) return;
+
+        if (fromAbove) {
           if (e.isBoss) {
             e.hp--;
             if (e.hp <= 0) e.alive = false;
+          } else if (e.type === 'turtle') {
+            e.hp--;
+            if (e.hp <= 0) {
+              e.alive = false;
+            } else {
+              e.retreated    = true;
+              e.retreatTimer = 90;
+            }
           } else {
             e.alive = false;
           }

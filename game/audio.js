@@ -6,28 +6,44 @@ const Audio = (() => {
   let musicTimeout = null;
   let musicPlaying = false;
 
+  let musicVolume = parseFloat(localStorage.getItem('bavaria_music_vol') ?? '0.7');
+  let sfxVolume   = parseFloat(localStorage.getItem('bavaria_sfx_vol')   ?? '1.0');
+
   function getCtx() {
     if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
     return ctx;
   }
 
-  function masterGain() {
-    const g = getCtx().createGain();
-    g.gain.value = muted ? 0 : 0.4;
-    g.connect(getCtx().destination);
-    return g;
-  }
-
   // ── Utility ──────────────────────────────────────────────────────────────
+  // Used for SFX
   function playTone(freq, type, duration, vol = 0.3, delay = 0) {
-    if (muted) return;
+    if (muted || sfxVolume === 0) return;
     const ac = getCtx();
     const osc = ac.createOscillator();
     const gain = ac.createGain();
     osc.type = type;
     osc.frequency.value = freq;
+    const v = vol * sfxVolume;
     gain.gain.setValueAtTime(0, ac.currentTime + delay);
-    gain.gain.linearRampToValueAtTime(vol, ac.currentTime + delay + 0.01);
+    gain.gain.linearRampToValueAtTime(v, ac.currentTime + delay + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + delay + duration);
+    osc.connect(gain);
+    gain.connect(ac.destination);
+    osc.start(ac.currentTime + delay);
+    osc.stop(ac.currentTime + delay + duration + 0.05);
+  }
+
+  // Used for music (separate volume)
+  function playMusicTone(freq, type, duration, vol = 0.3, delay = 0) {
+    if (muted || musicVolume === 0) return;
+    const ac = getCtx();
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    const v = vol * musicVolume;
+    gain.gain.setValueAtTime(0, ac.currentTime + delay);
+    gain.gain.linearRampToValueAtTime(v, ac.currentTime + delay + 0.01);
     gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + delay + duration);
     osc.connect(gain);
     gain.connect(ac.destination);
@@ -48,13 +64,14 @@ const Audio = (() => {
   }
 
   function sfxHit() {
+    if (muted || sfxVolume === 0) return;
     const ac = getCtx();
     const buf = ac.createBuffer(1, ac.sampleRate * 0.15, ac.sampleRate);
     const data = buf.getChannelData(0);
     for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
     const src = ac.createBufferSource();
     const gain = ac.createGain();
-    gain.gain.value = muted ? 0 : 0.4;
+    gain.gain.value = 0.4 * sfxVolume;
     src.buffer = buf;
     src.connect(gain);
     gain.connect(ac.destination);
@@ -137,13 +154,12 @@ const Audio = (() => {
   function scheduleLoop() {
     if (!musicPlaying || muted) return;
     const ac = getCtx();
-    const now = ac.currentTime;
 
     OOMPAH_PATTERNS.forEach(([f, type, dur, vol, delay]) => {
-      playTone(f, type, dur, vol, delay);
+      playMusicTone(f, type, dur, vol, delay);
     });
     MELODY.forEach(([f, delay]) => {
-      playTone(f, 'triangle', 0.35, 0.06, delay);
+      playMusicTone(f, 'triangle', 0.35, 0.06, delay);
     });
 
     musicTimeout = setTimeout(scheduleLoop, BAR_DURATION * 1000 - 100);
@@ -179,7 +195,17 @@ const Audio = (() => {
     sfxEnemyDie,
     sfxLevelComplete,
     sfxGameOver,
-    isMuted() { return muted; },
-    resume() { if (ctx) ctx.resume(); },
+    isMuted()        { return muted; },
+    resume()         { if (ctx) ctx.resume(); },
+    getMusicVolume() { return musicVolume; },
+    getSfxVolume()   { return sfxVolume; },
+    setMusicVolume(v) {
+      musicVolume = Math.max(0, Math.min(1, v));
+      localStorage.setItem('bavaria_music_vol', musicVolume);
+    },
+    setSfxVolume(v) {
+      sfxVolume = Math.max(0, Math.min(1, v));
+      localStorage.setItem('bavaria_sfx_vol', sfxVolume);
+    },
   };
 })();

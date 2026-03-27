@@ -30,6 +30,29 @@
     </div>
   </div>
 
+  <!-- Pause Overlay -->
+  <div id="pause-overlay" style="display:none; position:absolute; inset:0; align-items:center; justify-content:center; background:rgba(0,0,0,0.72); z-index:90;">
+    <div style="background:#1a0e00; border:2px solid #c88822; border-radius:14px; padding:40px 50px; text-align:center; font-family:'Cinzel',Georgia,serif; box-shadow:0 0 60px rgba(200,136,34,0.3); min-width:270px;">
+      <div style="font-size:28px; color:#FFD700; margin-bottom:24px; letter-spacing:0.12em;">PAUSE</div>
+
+      <div style="margin-bottom:16px;">
+        <label style="display:block; font-size:11px; color:#ffe07a; margin-bottom:7px; letter-spacing:0.06em;">MUSIK</label>
+        <input type="range" id="music-vol-slider" min="0" max="1" step="0.05"
+          style="width:190px; accent-color:#FFD700; cursor:pointer;">
+      </div>
+
+      <div style="margin-bottom:30px;">
+        <label style="display:block; font-size:11px; color:#ffe07a; margin-bottom:7px; letter-spacing:0.06em;">SOUNDEFFEKTE</label>
+        <input type="range" id="sfx-vol-slider" min="0" max="1" step="0.05"
+          style="width:190px; accent-color:#FFD700; cursor:pointer;">
+      </div>
+
+      <div style="font-size:13px; color:rgba(255,224,122,0.75); margin-bottom:8px;">P / ESC → Weiter spielen</div>
+      <div style="font-size:12px; color:rgba(255,200,80,0.45); margin-bottom:6px;">M → Hauptmenü</div>
+      <div style="font-size:11px; color:rgba(255,200,80,0.3);">F → Vollbild ein/aus</div>
+    </div>
+  </div>
+
   <!-- Name-Input Overlay (Bestenliste) -->
   <div id="name-overlay" style="display:none; position:absolute; inset:0; align-items:center; justify-content:center; background:rgba(0,0,0,0.72); z-index:100;">
     <div style="background:#1e0e00; border:2px solid #c88822; border-radius:14px; padding:36px 40px; text-align:center; font-family:'Cinzel',Georgia,serif; box-shadow:0 0 60px rgba(200,136,34,0.3);">
