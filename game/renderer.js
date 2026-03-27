@@ -116,17 +116,48 @@ const Renderer = (() => {
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, canvasW, canvasH);
 
+    // Stars for night themes
+    if (theme === 'mountain' || theme === 'castle') {
+      drawStars(ctx, camX * 0.02, canvasW, canvasH, theme);
+    }
+
     // Far mountains (parallax 0.15)
     drawMountainRange(ctx, camX * 0.15, canvasW, canvasH, t.mountain2, 0.55, 80);
     // Near mountains (parallax 0.35)
     drawMountainRange(ctx, camX * 0.35, canvasW, canvasH, t.mountain1, 0.68, 60);
+    // Mountain atmospheric haze at base
+    if (theme === 'mountain') {
+      const haze = ctx.createLinearGradient(0, canvasH * 0.55, 0, canvasH * 0.72);
+      haze.addColorStop(0, 'rgba(100,140,210,0)');
+      haze.addColorStop(1, 'rgba(80,120,200,0.22)');
+      ctx.fillStyle = haze;
+      ctx.fillRect(0, canvasH * 0.55, canvasW, canvasH * 0.17);
+    }
 
-    // Trees (parallax 0.6)
+    // Trees / castle walls (parallax 0.55-0.6)
     if (theme === 'castle')        drawCastleWalls(ctx, camX * 0.4, canvasW, canvasH);
-    else if (theme !== 'mountain') drawTrees(ctx, camX * 0.6, canvasW, canvasH, theme);
+    else if (theme !== 'mountain') {
+      drawTrees(ctx, camX * 0.55, canvasW, canvasH, theme); // far tree layer
+      drawTrees(ctx, camX * 0.7,  canvasW, canvasH, theme); // near tree layer (darker, taller)
+    }
 
     // Clouds (parallax 0.1)
-    drawClouds(ctx, camX * 0.1, canvasW, canvasH);
+    drawClouds(ctx, camX * 0.1, canvasW, canvasH, theme);
+  }
+
+  function drawStars(ctx, offsetX, w, h, theme) {
+    const starColor = theme === 'castle' ? 'rgba(200,180,255,' : 'rgba(255,255,220,';
+    // Deterministic positions using seed
+    for (let i = 0; i < 60; i++) {
+      const sx = ((i * 137.5 + offsetX * 0.3) % (w + 100) + w + 100) % (w + 100) - 50;
+      const sy = (Math.sin(i * 2.6) * 0.5 + 0.5) * h * 0.45;
+      const size = 0.5 + (Math.abs(Math.sin(i * 3.1)) * 1.2);
+      const twinkle = 0.5 + Math.abs(Math.sin(i * 0.7 + offsetX * 0.001)) * 0.5;
+      ctx.fillStyle = starColor + twinkle * 0.9 + ')';
+      ctx.beginPath();
+      ctx.arc(sx, sy, size, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   function drawMountainRange(ctx, offsetX, w, h, color, yFrac, peakH) {
@@ -179,8 +210,8 @@ const Renderer = (() => {
     ctx.fill();
   }
 
-  function drawClouds(ctx, offsetX, w, h) {
-    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+  function drawClouds(ctx, offsetX, w, h, theme) {
+    const alpha = (theme === 'mountain' || theme === 'castle') ? 0.45 : 0.75;
     const clouds = [
       [0.08, 0.12, 60, 20],
       [0.28, 0.08, 80, 25],
@@ -193,6 +224,11 @@ const Renderer = (() => {
     clouds.forEach(([xFrac, yFrac, cw, ch]) => {
       const cx = ((xFrac * 2400 - offsetX) % (w + 200) + w + 200) % (w + 200) - 100;
       const cy = yFrac * h;
+      // Cloud shadow (slightly below, darker)
+      ctx.fillStyle = `rgba(180,190,210,${alpha * 0.35})`;
+      drawCloud(ctx, cx + 4, cy + 5, cw, ch * 0.7);
+      // Cloud body
+      ctx.fillStyle = `rgba(255,255,255,${alpha})`;
       drawCloud(ctx, cx, cy, cw, ch);
     });
   }
@@ -282,31 +318,64 @@ const Renderer = (() => {
     ctx.fill();
 
     // Pass 4: type-specific details (batched per type)
-    // Grass (1)
+    // Grass (1) — bright top strip + grass blades
     if (byType[1]) {
       const pos = byType[1];
-      ctx.fillStyle = '#33BB33';
+      // Bright green top layer
+      ctx.fillStyle = '#44CC44';
       ctx.beginPath();
-      for (let i = 0; i < pos.length; i += 2) ctx.rect(pos[i], pos[i + 1], TS, 6);
+      for (let i = 0; i < pos.length; i += 2) ctx.rect(pos[i], pos[i + 1], TS, 7);
       ctx.fill();
-      ctx.fillStyle = 'rgba(0,0,0,0.15)';
+      // Lighter highlight along very top
+      ctx.fillStyle = 'rgba(100,255,80,0.35)';
       ctx.beginPath();
-      for (let i = 0; i < pos.length; i += 2) ctx.rect(pos[i], pos[i + 1] + 6, TS, 2);
+      for (let i = 0; i < pos.length; i += 2) ctx.rect(pos[i], pos[i + 1], TS, 3);
+      ctx.fill();
+      // Grass blade strokes
+      ctx.strokeStyle = '#22AA22';
+      ctx.lineWidth = 1.5;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      for (let i = 0; i < pos.length; i += 2) {
+        const bx = pos[i], by = pos[i + 1];
+        for (let b = 4; b < TS - 2; b += 6) {
+          const lean = Math.sin(b * 0.7) * 2;
+          ctx.moveTo(bx + b, by + 6);
+          ctx.lineTo(bx + b + lean, by + 1);
+        }
+      }
+      ctx.stroke();
+      // Dark shadow band below grass
+      ctx.fillStyle = 'rgba(0,0,0,0.18)';
+      ctx.beginPath();
+      for (let i = 0; i < pos.length; i += 2) ctx.rect(pos[i], pos[i + 1] + 7, TS, 3);
       ctx.fill();
     }
-    // Stone (2)
+    // Stone (2) — mortar lines + slight texture
     if (byType[2]) {
       const pos = byType[2];
-      ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+      ctx.strokeStyle = 'rgba(0,0,0,0.28)';
       ctx.lineWidth = 1;
       ctx.beginPath();
       for (let i = 0; i < pos.length; i += 2) {
         const x = pos[i], y = pos[i + 1];
-        ctx.rect(x + 0.5, y + 0.5, TS - 1, TS - 1);
-        ctx.moveTo(x + TS / 2, y + 0.5);  ctx.lineTo(x + TS / 2, y + TS / 2 - 1);
-        ctx.moveTo(x + 0.5,    y + TS / 2); ctx.lineTo(x + TS / 2 - 1, y + TS / 2);
+        // Horizontal mortar
+        ctx.moveTo(x,      y + TS / 2); ctx.lineTo(x + TS,  y + TS / 2);
+        // Vertical — offset every other row for brickwork feel
+        const col = Math.round(x / TS);
+        const off = (col % 2 === 0) ? 0 : TS / 2;
+        ctx.moveTo(x + off, y);          ctx.lineTo(x + off, y + TS / 2);
       }
       ctx.stroke();
+      // Pebble detail
+      ctx.fillStyle = 'rgba(255,255,255,0.07)';
+      ctx.beginPath();
+      for (let i = 0; i < pos.length; i += 2) {
+        const x = pos[i], y = pos[i + 1];
+        ctx.rect(x + 4,       y + 4,       TS / 2 - 6, TS / 2 - 6);
+        ctx.rect(x + TS / 2 + 3, y + TS / 2 + 3, TS / 2 - 6, TS / 2 - 6);
+      }
+      ctx.fill();
     }
     // Wood (3)
     if (byType[3]) {
@@ -688,15 +757,44 @@ const Renderer = (() => {
     ctx.scale(facing, 1);
     ctx.translate(0, -8);
 
-    const walk = Math.sin(tick * 0.18) * 10;
+    const walk     = Math.sin(tick * 0.2) * 12;  // leg swing angle (degrees)
+    const armSwing = Math.sin(tick * 0.2) * 0.45;
+    const bob      = Math.abs(Math.sin(tick * 0.2)) * 1.5; // vertical body bob
 
-    // Body — Dirndl/Lederhosen
-    ctx.fillStyle = '#8B0000'; // red dirndl
+    ctx.translate(0, -bob);
+
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+    ctx.beginPath(); ctx.ellipse(0, bob + 14, 10, 3.5, 0, 0, Math.PI * 2); ctx.fill();
+
+    // Legs with swing
+    ctx.fillStyle = '#4B3A1E';
+    ctx.save(); ctx.translate(-4, -6); ctx.rotate(walk * Math.PI / 180);
+    ctx.fillRect(-3, 0, 6, 13); ctx.restore();
+    ctx.save(); ctx.translate(4,  -6); ctx.rotate(-walk * Math.PI / 180);
+    ctx.fillRect(-3, 0, 6, 13); ctx.restore();
+    // Shoes
+    ctx.fillStyle = '#2A1E0E';
+    ctx.save(); ctx.translate(-4, -6); ctx.rotate(walk * Math.PI / 180);
+    ctx.fillRect(-4, 11, 8, 4); ctx.restore();
+    ctx.save(); ctx.translate(4,  -6); ctx.rotate(-walk * Math.PI / 180);
+    ctx.fillRect(-4, 11, 8, 4); ctx.restore();
+
+    // Body — red Dirndl
+    ctx.fillStyle = '#8B0000';
     ctx.fillRect(-8, -22, 16, 16);
-
     // Apron
     ctx.fillStyle = '#F0E68C';
     ctx.fillRect(-5, -20, 10, 12);
+    // White blouse sleeves (animated arm swing)
+    ctx.fillStyle = '#F5F5F5';
+    ctx.save(); ctx.translate(-10, -20); ctx.rotate(-armSwing);
+    ctx.fillRect(-3, -7, 6, 9); ctx.restore();
+    ctx.save(); ctx.translate(10,  -20); ctx.rotate(armSwing);
+    ctx.fillRect(-3, -7, 6, 9); ctx.restore();
+    // Dirndl bodice trim
+    ctx.fillStyle = '#AA0000';
+    ctx.fillRect(-8, -22, 16, 4);
 
     // Head
     ctx.fillStyle = '#F4C2A0';
@@ -704,22 +802,33 @@ const Renderer = (() => {
     ctx.arc(0, -28, 8, 0, Math.PI * 2);
     ctx.fill();
 
+    // Hair (braids)
+    ctx.fillStyle = '#8B5E1A';
+    ctx.beginPath(); ctx.arc(0, -32, 8, Math.PI, 0); ctx.fill();
+    ctx.fillRect(-8, -34, 4, 8);  // left braid
+    ctx.fillRect(4,  -34, 4, 8);  // right braid
+
     // Hat (Bavarian)
     ctx.fillStyle = '#228B22';
     ctx.fillRect(-9, -38, 18, 6);
     ctx.fillRect(-6, -42, 12, 6);
     ctx.fillStyle = '#FF6600';
-    ctx.fillRect(-3, -39, 6, 2); // hat band
+    ctx.fillRect(-5, -38, 10, 2); // hat band
+    // Feather
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.beginPath(); ctx.ellipse(7, -41, 2, 6, -0.3, 0, Math.PI * 2); ctx.fill();
 
     // Eyes
-    ctx.fillStyle = '#333';
+    ctx.fillStyle = '#FFF';
+    ctx.fillRect(-4, -31, 3, 3);
+    ctx.fillRect(1,  -31, 3, 3);
+    ctx.fillStyle = '#222';
     ctx.fillRect(-3, -30, 2, 2);
-    ctx.fillRect(1,  -30, 2, 2);
-
-    // Legs
-    ctx.fillStyle = '#4B3A1E';
-    ctx.fillRect(-7, -6, 6, 14);  // left leg
-    ctx.fillRect(1,  -6, 6, 14);  // right leg
+    ctx.fillRect(2,  -30, 2, 2);
+    // Rosy cheeks
+    ctx.fillStyle = 'rgba(240,100,100,0.3)';
+    ctx.beginPath(); ctx.arc(-5, -27, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(5,  -27, 3, 0, Math.PI * 2); ctx.fill();
 
     ctx.restore();
   }
@@ -852,11 +961,122 @@ const Renderer = (() => {
     ctx.ellipse(9, -57, 3, 8, -0.4, 0, Math.PI * 2);
     ctx.fill();
 
-    // Jump pose — arms up
-    if (!player.onGround) {
+    // Arms — swing while walking, or raise when attacking/jumping
+    if (player.attackTimer > 0) {
+      // Attack pose: front arm extended to hold sword, back arm pulled back
+      ctx.fillStyle = skin.shirt;
+      ctx.save(); ctx.translate(-13, -30); ctx.rotate(0.4);  ctx.fillRect(-3, -8, 6, 10); ctx.restore();
+      ctx.save(); ctx.translate(13, -28);  ctx.rotate(-0.8); ctx.fillRect(-3, -8, 6, 10); ctx.restore();
+    } else if (!player.onGround) {
       ctx.fillStyle = skin.shirt;
       ctx.save(); ctx.translate(-13, -30); ctx.rotate(-0.6); ctx.fillRect(-3, -8, 6, 10); ctx.restore();
       ctx.save(); ctx.translate(13, -30);  ctx.rotate(0.6);  ctx.fillRect(-3, -8, 6, 10); ctx.restore();
+    } else {
+      // Walking arm swing
+      ctx.fillStyle = skin.shirt;
+      const armSwing = player.onGround && Math.abs(player.vx) > 0.5 ? Math.sin(tick * 0.2) * 0.5 : 0;
+      ctx.save(); ctx.translate(-13, -28); ctx.rotate(-armSwing); ctx.fillRect(-3, -8, 6, 10); ctx.restore();
+      ctx.save(); ctx.translate(13,  -28); ctx.rotate( armSwing); ctx.fillRect(-3, -8, 6, 10); ctx.restore();
+    }
+
+    // ── Sword ──────────────────────────────────────────────────────────
+    if (player.attackTimer > 0) {
+      drawSwordSwing(ctx, player);
+    } else if (!skin.weisswurst) {
+      // Idle sword at hip (sheathed look)
+      ctx.save();
+      ctx.translate(13, -16);
+      ctx.rotate(0.25);
+      ctx.fillStyle = '#8B6914';
+      ctx.fillRect(-1.5, -14, 3, 14);
+      ctx.fillStyle = '#C8A020';
+      ctx.fillRect(-5, -1, 10, 3);
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+
+  function drawSwordSwing(ctx, player) {
+    const dur      = player.comboCount === 3 ? 22 : 15;
+    const progress = 1 - player.attackTimer / dur; // 0→1 over animation
+
+    ctx.save();
+    ctx.translate(13, -22); // sword hand (in facing-scaled space, positive = forward)
+
+    let angle;
+    if (player.comboCount === 1) {
+      angle = -1.7 + progress * 2.4;   // forward slash: back→front
+    } else if (player.comboCount === 2) {
+      angle = 0.5 - progress * 2.6;    // rising slash: low→high
+    } else {
+      angle = -2.0 + progress * 4.0;   // heavy slam: overhead→down
+    }
+    ctx.rotate(angle);
+
+    const bladeLen = player.comboCount === 3 ? 36 : 28;
+
+    // Swing arc trail
+    if (progress > 0.08 && progress < 0.72) {
+      const alpha = (0.72 - progress) * 1.1;
+      const trailOffset = player.comboCount === 2 ? -0.7 : 0.7;
+      const trailAngle  = angle - trailOffset;
+      ctx.save();
+      ctx.rotate(-angle); // undo blade rotation
+      ctx.rotate(trailAngle + (player.comboCount === 2 ? 0 : 0)); // apply trail angle
+      ctx.fillStyle = `rgba(180,210,255,${alpha * 0.55})`;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, bladeLen, -Math.PI * 0.05, Math.PI * 0.05);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+      // Re-rotate for blade
+      ctx.rotate(0);
+    }
+
+    // Handle
+    ctx.fillStyle = '#6B4A1A';
+    ctx.fillRect(-2.5, 2, 5, 8);
+    // Grip wrap
+    ctx.strokeStyle = '#3A2808';
+    ctx.lineWidth = 1;
+    for (let i = 3; i < 9; i += 3) {
+      ctx.beginPath(); ctx.moveTo(-2.5, i); ctx.lineTo(2.5, i); ctx.stroke();
+    }
+    // Crossguard
+    ctx.fillStyle = '#C8A020';
+    ctx.fillRect(-7, -1, 14, 4);
+    ctx.fillStyle = '#FFD740';
+    ctx.fillRect(-6, -0.5, 12, 2);
+
+    // Blade with gradient
+    const bGrd = ctx.createLinearGradient(-2, 0, 2, -bladeLen);
+    bGrd.addColorStop(0,   '#B0B8C8');
+    bGrd.addColorStop(0.4, '#E8F0FF');
+    bGrd.addColorStop(1,   '#9098A8');
+    ctx.fillStyle = bGrd;
+    ctx.beginPath();
+    ctx.moveTo(-2.5, 0);
+    ctx.lineTo(-1.5, -bladeLen);
+    ctx.lineTo(0, -bladeLen - 5);
+    ctx.lineTo(1.5, -bladeLen);
+    ctx.lineTo(2.5, 0);
+    ctx.closePath();
+    ctx.fill();
+
+    // Blade fuller (center groove)
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(-0.5, -3); ctx.lineTo(-0.5, -bladeLen + 5); ctx.stroke();
+
+    // Glint flash on active frames
+    if (progress < 0.35) {
+      const g = ctx.createRadialGradient(0, -bladeLen + 5, 0, 0, -bladeLen + 5, 8);
+      g.addColorStop(0, 'rgba(255,255,255,0.85)');
+      g.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(0, -bladeLen + 5, 8, 0, Math.PI * 2); ctx.fill();
     }
 
     ctx.restore();
@@ -1479,6 +1699,27 @@ const Renderer = (() => {
     });
   }
 
+  // ── Combo indicator (drawn over player head) ─────────────────────────
+  function drawComboIndicator(ctx, player, camX, camY) {
+    if (!player || player.comboCount === 0) return;
+    const sx = player.x + player.w / 2 - camX;
+    const sy = player.y - 18 - camY;
+    const labels = ['', '⚔', '⚔⚔', '💥 COMBO!'];
+    const colors  = ['', '#FFD740', '#FF9920', '#FF4400'];
+    const label   = labels[player.comboCount] || '';
+    const col     = colors[player.comboCount] || '#FFF';
+    const scale   = player.comboCount === 3 ? 1.3 : 1.0;
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, (player.comboTimer / 30) + (player.attackTimer > 0 ? 1 : 0));
+    ctx.font = `bold ${Math.round(14 * scale)}px "Cinzel", Georgia, serif`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillText(label, sx + 1, sy + 1);
+    ctx.fillStyle = col;
+    ctx.fillText(label, sx, sy);
+    ctx.restore();
+  }
+
   // ── Game complete screen ──────────────────────────────────────────────
   function drawGameComplete(ctx, w, h, score, highscore, isNewHighscore) {
     // Golden overlay
@@ -1546,6 +1787,7 @@ const Renderer = (() => {
     drawLevelBanner,
     drawBossHpBar,
     drawPowerUpHUD,
+    drawComboIndicator,
     drawGameComplete,
   };
 })();

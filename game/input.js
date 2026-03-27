@@ -26,9 +26,10 @@ const Input = (() => {
     el.addEventListener('mouseup',   e => { e.preventDefault(); keys[code] = false; });
   }
 
-  bindTouch('btn-left',  'ArrowLeft');
-  bindTouch('btn-right', 'ArrowRight');
-  bindTouch('btn-jump',  'Space');
+  bindTouch('btn-left',   'ArrowLeft');
+  bindTouch('btn-right',  'ArrowRight');
+  bindTouch('btn-jump',   'Space');
+  bindTouch('btn-attack', 'KeyZ');
 
   return {
     isDown(code) { return !!keys[code]; },
@@ -36,6 +37,7 @@ const Input = (() => {
     right() { return !!(keys['ArrowRight'] || keys['KeyD']); },
     jump()  { return !!(keys['Space'] || keys['ArrowUp'] || keys['KeyW']); },
     enter() { return !!(keys['Enter'] || keys['Space']); },
+    attack() { return !!(keys['KeyZ'] || keys['KeyJ'] || keys['KeyX']); },
     clearEnter() { keys['Enter'] = false; keys['Space'] = false; },
   };
 })();

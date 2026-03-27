@@ -94,6 +94,26 @@ const Audio = (() => {
     notes.forEach((f, i) => playTone(f, 'sawtooth', 0.3, 0.3, i * 0.2));
   }
 
+  function sfxSwordSwing(comboHit) {
+    if (comboHit === 1) {
+      playTone(320, 'sawtooth', 0.05, 0.18);
+      playTone(680, 'square',   0.04, 0.08, 0.025);
+    } else if (comboHit === 2) {
+      playTone(480, 'sawtooth', 0.06, 0.20);
+      playTone(900, 'square',   0.04, 0.09, 0.025);
+    } else {
+      // Heavy slam — low thud + spark
+      playTone(110, 'sawtooth', 0.14, 0.35);
+      playTone(440, 'square',   0.06, 0.18, 0.04);
+      playTone(1100,'sine',     0.04, 0.10, 0.07);
+    }
+  }
+
+  function sfxSwordHit() {
+    playTone(180, 'square',   0.07, 0.28);
+    playTone(320, 'sawtooth', 0.05, 0.18, 0.02);
+  }
+
   // ── Oompah Music ──────────────────────────────────────────────────────────
   // C major Oompah: bass on beat 1, chord on beats 2-3
   const OOMPAH_PATTERNS = [
@@ -195,6 +215,8 @@ const Audio = (() => {
     sfxEnemyDie,
     sfxLevelComplete,
     sfxGameOver,
+    sfxSwordSwing,
+    sfxSwordHit,
     isMuted()        { return muted; },
     resume()         { if (ctx) ctx.resume(); },
     getMusicVolume() { return musicVolume; },

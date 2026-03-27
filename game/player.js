@@ -26,6 +26,12 @@ const Player = (() => {
       scaleY: 1,
       speedTimer: 0,    // frames speed-boost active (~5s @ 60fps = 300)
       flyTimer: 0,      // frames fly active (~3s @ 60fps = 180)
+      // ── Sword / Combo ─────────────────────────────────────────────────
+      attackTimer: 0,   // frames left in current attack animation
+      comboCount: 0,    // 0=none, 1/2/3 = which hit in combo
+      comboTimer: 0,    // frames left in combo-chain window
+      attackId:   0,    // increments each new swing (prevents multi-hit)
+      atkPressed: false,// edge-detect so holding doesn't repeat
     };
   }
 
@@ -142,6 +148,34 @@ const Player = (() => {
 
     // Fell into pit?
     if (player.y > level.height + 64) player.dead = true;
+
+    // ── Sword / Combo ─────────────────────────────────────────────────────
+    const atkDown = input.attack ? input.attack() : false;
+    if (atkDown && !player.atkPressed) {
+      player.atkPressed = true;
+      if (player.attackTimer === 0) {
+        // Chain next combo hit or start fresh
+        if (player.comboTimer > 0) {
+          player.comboCount = player.comboCount >= 3 ? 1 : player.comboCount + 1;
+        } else {
+          player.comboCount = 1;
+        }
+        player.attackId++;
+        player.attackTimer = player.comboCount === 3 ? 22 : 15;
+        player.comboTimer  = 0;
+        Audio.sfxSwordSwing(player.comboCount);
+      }
+    } else if (!atkDown) {
+      player.atkPressed = false;
+    }
+    if (player.attackTimer > 0) {
+      player.attackTimer--;
+      if (player.attackTimer === 0) player.comboTimer = 30;
+    }
+    if (player.comboTimer > 0) {
+      player.comboTimer--;
+      if (player.comboTimer === 0) player.comboCount = 0;
+    }
 
     // Invincibility countdown
     if (player.invincible > 0) player.invincible--;
@@ -342,5 +376,29 @@ const Player = (() => {
     return { hit, killed };
   }
 
-  return { create, update, checkCollectibles, checkEnemies, W, H };
+  // Returns the active sword hitbox rect {x,y,w,h} or null if not attacking
+  function getAttackHitbox(player) {
+    if (player.attackTimer <= 0) return null;
+    const totalDur   = player.comboCount === 3 ? 22 : 15;
+    const activeEnd  = Math.floor(totalDur * 0.72); // only first 72% of anim is "live"
+    const elapsed    = totalDur - player.attackTimer;
+    if (elapsed > activeEnd) return null;
+
+    const f  = player.facing;
+    const cx = player.x + player.w / 2;
+    const cy = player.y + player.h / 2;
+
+    if (player.comboCount === 1) {
+      // Quick forward slash: moderate range in front
+      return { x: f > 0 ? cx - 2 : cx - 40, y: cy - 22, w: 42, h: 28 };
+    } else if (player.comboCount === 2) {
+      // Rising slash: taller, covers above
+      return { x: f > 0 ? cx - 2 : cx - 40, y: cy - 38, w: 42, h: 36 };
+    } else {
+      // Heavy slam: wider, slight downward
+      return { x: f > 0 ? cx - 6 : cx - 50, y: cy - 18, w: 56, h: 30 };
+    }
+  }
+
+  return { create, update, checkCollectibles, checkEnemies, getAttackHitbox, W, H };
 })();

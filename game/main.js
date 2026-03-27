@@ -81,6 +81,7 @@ const Game = (() => {
     { triggerX: 380,  text: 'Leertaste: Springen',    shown: false },
     { triggerX: 700,  text: 'Doppelsprung möglich!',  shown: false },
     { triggerX: 1000, text: 'Auf Gegner springen!',   shown: false },
+    { triggerX: 1200, text: 'Z / J: Schwert-Angriff!', shown: false },
     { triggerX: 1400, text: 'Sammle Brezeln!',        shown: false },
   ];
   let tutorialHints = TUTORIAL_HINTS.map(h => ({ ...h }));
@@ -433,6 +434,56 @@ const Game = (() => {
       }
     });
 
+    // ── Sword attack hits ─────────────────────────────────────────────────
+    if (player.attackTimer > 0) {
+      const swordBox = Player.getAttackHitbox(player);
+      if (swordBox) {
+        level.enemies.forEach(e => {
+          if (!e.alive) return;
+          if (e.lastSwordHitId === player.attackId) return; // already hit this swing
+          const EW = e.W || 26, EH = e.H || 36;
+          const ex = e.x - EW / 2, ey = e.y - EH;
+          if (swordBox.x < ex + EW && swordBox.x + swordBox.w > ex &&
+              swordBox.y < ey + EH && swordBox.y + swordBox.h > ey) {
+            e.lastSwordHitId = player.attackId;
+            const dmg = player.comboCount === 3 ? 2 : 1;
+            const prevAlive = e.alive;
+            if (e.isBoss) {
+              e.hp -= dmg;
+              if (e.hp <= 0) e.alive = false;
+            } else if (e.type === 'turtle') {
+              if (e.retreated) { e.alive = false; }
+              else { e.hp--; if (e.hp <= 0) { e.alive = false; } else { e.retreated = true; e.retreatTimer = 90; } }
+            } else {
+              e.alive = false;
+            }
+            if (!e.alive) {
+              levelKillCount++;
+              const isBoss = !!e.isBoss;
+              const pts = isBoss ? 500 : 50;
+              Particles.spawn(e.x, e.y - 14, isBoss ? 30 : 12,
+                              isBoss ? '#FFD700' : '#FF6600', isBoss ? 6 : 4, isBoss ? 50 : 28);
+              triggerShake(isBoss ? 18 : 5, isBoss ? 10 : 3);
+              hitPauseFrames = isBoss ? 12 : 3;
+              score += pts;
+              scorePopups.push({ x: e.x, y: e.y - 30, text: '+' + pts, life: 55, maxLife: 55 });
+              Audio.sfxEnemyDie();
+            } else {
+              // Hit but survived
+              Particles.spawn(e.x, e.y - 14, 6, '#FF9944', 3, 18);
+              Audio.sfxSwordHit();
+            }
+            if (player.comboCount === 3) {
+              scorePopups.push({ x: player.x + 12, y: player.y - 52,
+                                 text: 'COMBO!', life: 75, maxLife: 75 });
+              Particles.spawn(player.x + player.w / 2, player.y, 18, '#FFD700', 5, 30);
+              triggerShake(6, 4);
+            }
+          }
+        });
+      }
+    }
+
     if (hit) {
       player.invincible = 90;
       lives--;
@@ -563,6 +614,7 @@ const Game = (() => {
     Renderer.drawProjectiles(ctx, level, dcamX, dcamY);
     Renderer.drawPlayerTrail(ctx, playerTrail, dcamX, dcamY);
     Renderer.drawPlayer(ctx, player, dcamX, dcamY, tick, selectedSkin);
+    Renderer.drawComboIndicator(ctx, player, dcamX, dcamY);
     Particles.draw(ctx, dcamX, dcamY);
     Renderer.drawScorePopups(ctx, scorePopups, dcamX, dcamY);
 

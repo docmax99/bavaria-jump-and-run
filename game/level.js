@@ -617,18 +617,35 @@ const Level = {
         }
       }
 
-      // ── Move X ────────────────────────────────────────────────────────
+      // ── Move X + wall collision ───────────────────────────────────────
+      const EW = e.W || 26;
+      const EH = e.H || 36;
+      // Check wall tile in direction of movement before moving
+      if (e.vx !== 0) {
+        const wallCheckX = e.vx > 0 ? e.x + EW * 0.5 + 2 : e.x - EW * 0.5 - 2;
+        const wallRowTop = Math.floor((e.y - EH * 0.6) / TILE_SIZE);
+        const wallRowBot = Math.floor((e.y - EH * 0.15) / TILE_SIZE);
+        const wallCol    = Math.floor(wallCheckX / TILE_SIZE);
+        if (Level.isSolid(Level.getTile(map, wallRowTop, wallCol)) ||
+            Level.isSolid(Level.getTile(map, wallRowBot, wallCol))) {
+          e.vx = -e.vx;
+        }
+      }
       e.x += e.vx;
 
       // Turn at patrol bounds
       if (e.x <= e.minX) { e.x = e.minX; e.vx = Math.abs(e.vx); }
       if (e.x >= e.maxX) { e.x = e.maxX; e.vx = -Math.abs(e.vx); }
 
-      // Turn at platform edges (no ground ahead → don't walk off)
+      // Turn at platform edges: check if there's solid ground one tile ahead+below
       if (onGround) {
+        // e.y is the bottom-of-feet position after snapping to tile top
         const groundRow = Math.floor(e.y / TILE_SIZE);
-        const aheadX    = e.x + (e.vx > 0 ? 16 : -16);
+        // Look 1 full enemy-half-width ahead
+        const lookDist  = (e.W || 26) * 0.5 + 4;
+        const aheadX    = e.x + (e.vx > 0 ? lookDist : -lookDist);
         const aheadCol  = Math.floor(aheadX / TILE_SIZE);
+        // There must be solid ground at the SAME tile row ahead (not air)
         const tileAhead = Level.getTile(map, groundRow, aheadCol);
         if (!Level.isSolid(tileAhead) && !Level.isPassthrough(tileAhead)) {
           e.vx = -e.vx;
